@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Place Archive</title>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background: #f5f5f7; margin: 0; padding: 20px; }
+        header { text-align: center; padding: 20px 0; border-bottom: 2px solid #333; }
+        .container { max-width: 600px; margin: auto; }
+        
+        /* 입력 폼 */
+        .input-section { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, select, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { background: #007AFF; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { background: #0056b3; }
+
+        /* 장소 카드 리스트 */
+        .place-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .tag { display: inline-block; background: #e1f5fe; color: #01579b; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin-right: 5px; }
+        .folder-tag { background: #fff3e0; color: #e65100; }
+        .time-stamp { font-size: 0.75rem; color: #888; margin-top: 5px; }
+        
+        /* 소셜 기능 (댓글) */
+        .comment-section { margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; }
+        .comment { font-size: 0.85rem; background: #f9f9f9; padding: 5px; margin: 3px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>📍 Place Keeper</h1>
+        <p>나만의 소중한 장소를 기록하고 공유하세요.</p>
+    </header>
+
+    <div class="input-section">
+        <h3>새 장소 기록하기</h3>
+        <select id="region">
+            <option value="서울">서울</option>
+            <option value="대전">대전</option>
+            <option value="대구">대구</option>
+            <option value="부산">부산</option>
+            <option value="공주">공주</option>
+            <option value="무주">무주</option>
+        </select>
+        <input type="text" id="placeName" placeholder="장소 이름 (예: 맛있는 카페)">
+        <input type="text" id="folderName" placeholder="폴더 이름 (예: 음식점, 관광명소)">
+        <button onclick="savePlace()">현재 위치 저장하기</button>
+    </div>
+
+    <div id="placeList">
+        <div class="place-card">
+            <div>
+                <span class="tag">#서울</span>
+                <span class="tag folder-tag">#음식점</span>
+            </div>
+            <h2 style="margin: 10px 0 5px 0;">광화문 미진</h2>
+            <p style="color: #555; font-size: 0.9rem;">서울특별시 종로구 종로 19</p>
+            <div class="time-stamp">방문일시: 2026-03-19 18:30</div>
+            
+            <div class="comment-section">
+                <div class="comment"><strong>친구1:</strong> 여기 메밀국수 진짜 맛있지!</div>
+                <input type="text" placeholder="댓글을 남겨보세요..." style="font-size: 0.8rem; padding: 5px;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function savePlace() {
+        const region = document.getElementById('region').value;
+        const name = document.getElementById('placeName').value;
+        const folder = document.getElementById('folderName').value;
+        const now = new Date().toLocaleString(); // 현재 시간 기록
+
+        if(!name || !folder) {
+            alert("장소와 폴더 이름을 입력해주세요!");
+            return;
+        }
+
+        const list = document.getElementById('placeList');
+        const card = document.createElement('div');
+        card.className = 'place-card';
+        card.innerHTML = `
+            <div>
+                <span class="tag">#${region}</span>
+                <span class="tag folder-tag">#${folder}</span>
+            </div>
+            <h2 style="margin: 10px 0 5px 0;">${name}</h2>
+            <p style="color: #555; font-size: 0.9rem;">(자동 인식된 가상 주소)</p>
+            <div class="time-stamp">방문일시: ${now}</div>
+            <div class="comment-section">
+                <input type="text" placeholder="댓글을 남겨보세요..." style="font-size: 0.8rem; padding: 5px;">
+            </div>
+        `;
+        
+        list.prepend(card); // 최신 글이 위로 오게 추가
+        
+        // 입력창 초기화
+        document.getElementById('placeName').value = "";
+        document.getElementById('folderName').value = "";
+    }
+</script>
+
+</body>
+</html>
