@@ -1,2196 +1,355 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>위치 관리 앱 - PlaceKeeper</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        :root {
-            --app-pink-50: #fdf2f8;
-            --app-pink-100: #fce7f3;
-            --app-pink-200: #fbcfe8;
-            --app-pink-500: #ec4899;
-            --app-pink-600: #db2777;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlaceKeeper - 내가 다닌 모든 장소를 기록하세요</title>
+  <meta name="description" content="도시별, 분류별로 장소를 기록하는 앱. GPS 저장, 사진 첨부, 구글 드라이브 백업까지.">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-            /* 라이트 모드 기본값 */
-            --bg-app: #ffffff;
-            --bg-main: #f9fafb;
-            --bg-card: #ffffff;
-            --bg-header: #fdf2f8;
-            --bg-footer: #ffffff;
-            --bg-input: #f9fafb;
-            --border-color: #fce7f3;
-            --text-primary: #1f2937;
-            --text-secondary: #6b7280;
-            --text-muted: #9ca3af;
-            --shadow-card: 0 1px 3px rgba(0,0,0,0.07);
-        }
+    :root {
+      --pink: #ec4899;
+      --pink-light: #f9a8d4;
+      --pink-pale: #fce7f3;
+      --gray-dark: #1f2937;
+      --gray-mid: #6b7280;
+      --gray-light: #f9fafb;
+    }
 
-        body.dark-mode {
-            --bg-app: #18181b;
-            --bg-main: #1c1c1f;
-            --bg-card: #27272a;
-            --bg-header: #27272a;
-            --bg-footer: #1f1f23;
-            --bg-input: #3f3f46;
-            --border-color: #3f3f46;
-            --text-primary: #f4f4f5;
-            --text-secondary: #a1a1aa;
-            --text-muted: #71717a;
-            --shadow-card: 0 1px 3px rgba(0,0,0,0.4);
-        }
+    html { scroll-behavior: smooth; }
 
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: var(--bg-app);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-            transition: background-color 0.3s ease;
-        }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: #fff;
+      color: var(--gray-dark);
+      overflow-x: hidden;
+    }
 
-        /* 다크모드 주요 요소 오버라이드 */
-        body.dark-mode .bg-white { background-color: var(--bg-card) !important; }
-        body.dark-mode .bg-gray-50,
-        body.dark-mode .bg-gray-50\/50 { background-color: var(--bg-main) !important; }
-        body.dark-mode .bg-gray-100 { background-color: var(--bg-input) !important; }
-        body.dark-mode .bg-pink-50 { background-color: #3a1a2e !important; }
-        body.dark-mode .border-gray-100 { border-color: var(--border-color) !important; }
-        body.dark-mode .border-pink-100 { border-color: #5a2a44 !important; }
-        body.dark-mode .text-gray-800 { color: var(--text-primary) !important; }
-        body.dark-mode .text-gray-700 { color: var(--text-secondary) !important; }
-        body.dark-mode .text-gray-400 { color: var(--text-muted) !important; }
-        body.dark-mode .text-gray-300 { color: #71717a !important; }
-        body.dark-mode .shadow-sm,
-        body.dark-mode .shadow-md,
-        body.dark-mode .shadow-lg { box-shadow: var(--shadow-card) !important; }
-        body.dark-mode input,
-        body.dark-mode textarea { background-color: var(--bg-input) !important; color: var(--text-primary) !important; border-color: var(--border-color) !important; }
-        body.dark-mode input::placeholder,
-        body.dark-mode textarea::placeholder { color: var(--text-muted) !important; }
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #f3f4f6;
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-        /* 설정 패널 슬라이드 */
-        #settingsPanel {
-            transform: translateX(100%);
-            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #settingsPanel.open {
-            transform: translateX(0);
-        }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #f9a8d4, #ec4899);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-text { font-size: 18px; font-weight: 900; color: var(--gray-dark); }
+    .logo-text span { color: var(--pink); }
 
-        .toggle-bg { transition: background-color 0.3s ease; }
-        .toggle-dot { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    nav a {
+      text-decoration: none;
+      font-size: 13px; font-weight: 700;
+      color: var(--gray-mid);
+      margin-left: 24px;
+      transition: color 0.2s;
+    }
+    nav a:hover { color: var(--pink); }
 
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: var(--app-pink-200);
-            border-radius: 10px;
-        }
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 100px 24px 60px;
+      position: relative; overflow: hidden;
+    }
 
-        .place-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1.25rem;
-        }
+    .hero-blob { position: absolute; border-radius: 50%; pointer-events: none; }
+    .blob1 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(236,72,153,0.1) 0%, transparent 70%);
+      top: -100px; left: -100px;
+      animation: float1 7s ease-in-out infinite;
+    }
+    .blob2 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(251,207,232,0.2) 0%, transparent 70%);
+      bottom: 0; right: -80px;
+      animation: float2 8s ease-in-out infinite;
+    }
+    @keyframes float1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-20px)} }
+    @keyframes float2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(16px)} }
 
-        @media (min-width: 768px) {
-            .place-grid { grid-template-columns: repeat(2, 1fr); }
-        }
+    .app-icon {
+      width: 100px; height: 100px;
+      background: linear-gradient(135deg, #f9a8d4, #ec4899);
+      border-radius: 26px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 20px 60px rgba(236,72,153,0.3);
+      margin: 0 auto 32px;
+      animation: fadeUp 0.7s ease both;
+    }
 
-        #photoDisplay {
-            background-size: cover;
-            background-position: center;
-            transition: all 0.3s ease;
-        }
-        
-        .modal-overlay {
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
-        }
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 56px);
+      font-weight: 900; line-height: 1.15; letter-spacing: -1px;
+      margin-bottom: 20px;
+      animation: fadeUp 0.7s 0.1s ease both;
+    }
+    .hero h1 span { color: var(--pink); }
 
-        /* 터치 피드백 강화 */
-        .active-scale:active { transform: scale(0.96); }
+    .hero p {
+      font-size: clamp(15px, 2.5vw, 18px);
+      font-weight: 600; color: var(--gray-mid); line-height: 1.7;
+      max-width: 480px; margin: 0 auto 40px;
+      animation: fadeUp 0.7s 0.2s ease both;
+    }
 
-        /* ── 푸터 버튼 라이트/다크 모드 ── */
-        .footer-btn-outline {
-            background: #fdf2f8;
-            border: 2px solid #ec4899;
-        }
-        .footer-btn-text { color: #991b1b; }
-        .footer-btn-settings {
-            background: #f3f4f6;
-            color: #6b7280;
-        }
-        body.dark-mode .footer-btn-outline {
-            background: #3a1a2e;
-            border-color: #ec4899;
-        }
-        body.dark-mode .footer-btn-text { color: #f9a8d4; }
-        body.dark-mode .footer-btn-settings {
-            background: #3f3f46;
-            color: #ec4899;
-        }
-        body.dark-mode #mainFooter {
-            background: var(--bg-footer);
-            border-color: var(--border-color);
-        }
-    </style>
+    .btn-group {
+      display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+      animation: fadeUp 0.7s 0.3s ease both;
+    }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--pink); color: #fff;
+      font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800;
+      padding: 14px 28px; border-radius: 16px; text-decoration: none;
+      box-shadow: 0 8px 24px rgba(236,72,153,0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(236,72,153,0.4); }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #f3f4f6; color: var(--gray-dark);
+      font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800;
+      padding: 14px 28px; border-radius: 16px; text-decoration: none;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .btn-secondary:hover { transform: translateY(-2px); background: #e5e7eb; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .features { padding: 80px 24px; background: var(--gray-light); }
+
+    .section-title { text-align: center; font-size: clamp(24px, 4vw, 36px); font-weight: 900; margin-bottom: 12px; }
+    .section-title span { color: var(--pink); }
+    .section-sub { text-align: center; font-size: 15px; font-weight: 600; color: var(--gray-mid); margin-bottom: 56px; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px; max-width: 960px; margin: 0 auto;
+    }
+
+    .feature-card {
+      background: #fff; border-radius: 20px; padding: 28px 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(0,0,0,0.1); }
+
+    .feature-icon {
+      width: 48px; height: 48px; background: var(--pink-pale);
+      border-radius: 14px; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+    }
+    .feature-card h3 { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+    .feature-card p { font-size: 13px; font-weight: 600; color: var(--gray-mid); line-height: 1.6; }
+
+    .privacy { padding: 80px 24px; max-width: 760px; margin: 0 auto; }
+    .privacy h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 900; margin-bottom: 8px; }
+    .privacy-date { font-size: 13px; font-weight: 600; color: var(--gray-mid); margin-bottom: 40px; }
+
+    .privacy-section { margin-bottom: 36px; }
+    .privacy-section h3 {
+      font-size: 16px; font-weight: 800; color: var(--pink);
+      margin-bottom: 10px; padding-left: 12px;
+      border-left: 3px solid var(--pink);
+    }
+    .privacy-section p, .privacy-section li {
+      font-size: 14px; font-weight: 600; color: #4b5563; line-height: 1.8;
+    }
+    .privacy-section ul { padding-left: 20px; }
+    .privacy-section li { margin-bottom: 4px; }
+
+    .privacy-highlight {
+      background: var(--pink-pale); border-radius: 12px;
+      padding: 16px 20px; margin-top: 12px;
+    }
+    .privacy-highlight p { color: #be185d; font-weight: 700; }
+
+    footer {
+      background: var(--gray-dark); color: #9ca3af;
+      text-align: center; padding: 40px 24px;
+    }
+    footer .footer-logo { font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 12px; }
+    footer .footer-logo span { color: var(--pink-light); }
+    footer p { font-size: 13px; font-weight: 600; line-height: 1.8; }
+    footer a { color: var(--pink-light); text-decoration: none; }
+
+    .divider { height: 1px; background: linear-gradient(to right, transparent, #e5e7eb, transparent); margin: 0 24px; }
+
+    @media (max-width: 600px) { nav { display: none; } }
+  </style>
 </head>
+<body>
 
-    <body class="bg-gray-50">
+  <header>
+    <a class="logo" href="#">
+      <div class="logo-icon">
+        <svg width="20" height="20" fill="none" stroke="white" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </div>
+      <span class="logo-text">Place<span>Keeper</span></span>
+    </a>
+    <nav>
+      <a href="#features">기능</a>
+      <a href="#privacy">개인정보처리방침</a>
+      <a href="mailto:mi1re12@hanmail.net">문의</a>
+    </nav>
+  </header>
 
-        <div class="w-full h-full bg-white flex flex-col relative overflow-hidden mx-auto shadow-2xl">
-            
-            <header id="photoDisplay" onclick="triggerPhotoUpload()" class="h-[11vh] bg-pink-50 border-b border-pink-100 flex items-center justify-center shrink-0 relative cursor-pointer group overflow-hidden">
-                <div id="photoPlaceholder" class="flex flex-col items-center gap-1">
-                    <svg class="w-6 h-6 text-pink-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    <span class="text-pink-300 text-[11px] font-bold tracking-tight">대표 사진 설정</span>
-                </div>
-                <div id="photoControls" class="absolute inset-0 bg-black/20 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity hidden">
-                    <button onclick="event.stopPropagation(); triggerPhotoUpload();" class="bg-white/90 px-3 py-1.5 rounded-full text-[10px] font-bold text-gray-700">변경</button>
-                    <button onclick="event.stopPropagation(); removePhoto();" class="bg-red-500/90 px-3 py-1.5 rounded-full text-[10px] font-bold text-white">삭제</button>
-                </div>
-                <input type="file" id="photoInput" class="hidden" accept="image/*" onchange="handlePhotoSelect(event)">
-            </header>
+  <section class="hero">
+    <div class="hero-blob blob1"></div>
+    <div class="hero-blob blob2"></div>
 
-            <section class="p-4 shrink-0 bg-white z-30 shadow-sm border-b border-gray-100">
-                <div class="max-w-4xl mx-auto grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1.5 text-left">
-                        <div class="flex items-center justify-between px-1">
-                        <span class="text-[10px] font-bold text-pink-500 uppercase">도시목록</span>
-                        <div class="flex items-center gap-3">
-                            <div class="flex items-center gap-1">
-                                <span class="text-[8px] font-bold text-gray-300">이름순</span>
-                                <label class="flex items-center cursor-pointer">
-                                    <input type="checkbox" id="sortCity" class="hidden" onchange="toggleSort('city', this)">
-                                    <div class="toggle-bg bg-gray-200 w-7 h-4 rounded-full relative shadow-inner">
-                                        <div class="toggle-dot absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full shadow-sm"></div>
-                                    </div>
-                                </label>
-                            </div>
-                            <button onclick="addNewItem('city')" class="bg-pink-50 text-pink-500 text-[9px] font-black px-2.5 py-1 rounded-md border border-pink-100 active-scale transition-all">추가</button>
-                        </div>
-                    </div>
-                        <div class="relative">
-                            <button id="cityBtn" class="w-full bg-white border border-pink-100 text-pink-500 rounded-xl py-2.5 px-4 text-left text-xs flex justify-between items-center shadow-sm active-scale">
-                                <span id="cityText" class="font-bold">도시 선택</span>
-                                <svg class="w-3 h-3 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                            </button>
-                            <div id="cityList" class="hidden absolute top-full left-0 w-full mt-1 bg-white border border-pink-100 rounded-xl shadow-xl max-h-40 overflow-y-auto z-50 custom-scrollbar"></div>
-                                
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-1.5 text-left">
-                        <div class="flex items-center justify-between px-1">
-                            <span class="text-[10px] font-bold text-pink-500 uppercase">분류목록</span>
-                            <div class="flex items-center gap-3">
-                                <div class="flex items-center gap-1">
-                                    <span class="text-[8px] font-bold text-gray-300">이름순</span>
-                                    <label class="flex items-center cursor-pointer">
-                                        <input type="checkbox" id="sortCategory" class="hidden" onchange="toggleSort('category', this)">
-                                        <div class="toggle-bg bg-gray-200 w-7 h-4 rounded-full relative shadow-inner">
-                                            <div class="toggle-dot absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full shadow-sm"></div>
-                                        </div>
-                                    </label>
-                                </div>
-                                <button onclick="addNewItem('category')" class="bg-pink-50 text-pink-500 text-[9px] font-black px-2.5 py-1 rounded-md border border-pink-100 active-scale transition-colors hover:bg-pink-100">추가</button>
-                            </div>
-                        </div>
-                        <div class="relative">
-                            <button id="catBtn" class="w-full bg-white border border-pink-100 text-pink-500 rounded-xl py-2.5 px-4 text-left text-xs flex justify-between items-center shadow-sm active-scale">
-                                <span id="catText" class="font-bold">분류 선택</span>
-                                <svg class="w-3 h-3 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                            </button>
-                            <div id="catList" class="hidden absolute top-full left-0 w-full mt-1 bg-white border border-pink-100 rounded-xl shadow-xl max-h-40 overflow-y-auto z-50 custom-scrollbar"></div>
-                        </div>
-                    </div>
-            </div>
-        </section>
+    <div class="app-icon">
+      <svg width="48" height="48" fill="none" stroke="white" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+    </div>
 
-        <main class="flex-1 overflow-y-auto bg-gray-50/50 p-4 custom-scrollbar">
-            <div class="max-w-4xl mx-auto">
-                <div id="placeList" class="place-grid"></div>
-            </div>
-        </main>
-        
-        <footer class="shrink-0 bg-white border-t border-gray-100 z-40" id="mainFooter" style="padding: 1rem 1rem max(2rem, env(safe-area-inset-bottom, 1.5rem)) 1rem;">
-            <div class="max-w-4xl mx-auto flex items-center justify-between px-2">
-                <div class="flex gap-3">
-                    <!-- 현재 위치 저장 -->
-                    <button onclick="saveCurrentLocation()" class="w-14 h-14 footer-btn-outline rounded-full flex items-center justify-center shadow-md active-scale text-center leading-tight">
-                        <span class="footer-btn-text font-black text-[10px]">현재<br>위치 저장</span>
-                    </button>
-                    <!-- 주소 추가 -->
-                    <button onclick="addPlaceAction()" class="w-14 h-14 footer-btn-outline rounded-full flex items-center justify-center shadow-md active-scale">
-                        <span class="footer-btn-text font-black text-[10px]">주소<br>추가</span>
-                    </button>
-                    <!-- 전체 목록 -->
-                    <button onclick="openFullList()" class="w-14 h-14 bg-pink-500 text-white rounded-full flex items-center justify-center shadow-md active-scale">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
-                </div>
-                <!-- 설정 (크기 통일 w-14 h-14) -->
-                <button onclick="openSettings()" class="w-14 h-14 footer-btn-settings rounded-full flex items-center justify-center shadow-md active-scale transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                </button>
-            </div>
-        </footer>
-        
-        <div id="listModal" class="fixed inset-0 z-[110] modal-overlay opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
-            <div class="bg-white w-full max-w-lg h-[85vh] rounded-[32px] overflow-hidden shadow-2xl flex flex-col transform scale-95 transition-transform duration-300">
-                <!-- 헤더 -->
-                <div class="px-5 pt-5 pb-3 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
-                    <div class="flex items-center gap-2">
-                        <h2 class="text-base font-black text-gray-800">전체 장소</h2>
-                        <span id="totalCount" class="text-xs font-black text-white bg-pink-500 px-2 py-0.5 rounded-full">0</span>
-                    </div>
-                    <button onclick="closeListModal()" class="p-1.5 text-gray-400">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                <!-- 검색창 -->
-                <div class="px-4 py-2.5 bg-white border-b border-gray-100 shrink-0">
-                    <input type="text" id="modalSearchInput" oninput="filterModalList()" placeholder="장소 이름이나 주소로 검색..." class="w-full bg-gray-100 border-none rounded-xl px-4 py-2 text-xs focus:ring-2 focus:ring-pink-200 outline-none">
-                </div>
-                <!-- 2단: 도시 사이드바 + 우측 콘텐츠 -->
-                <div id="listTwoCol" class="flex flex-1 min-h-0">
-                    <!-- 왼쪽 도시 사이드바 -->
-                    <div class="w-[82px] shrink-0 bg-gray-50 border-r border-gray-100 overflow-y-auto custom-scrollbar py-2">
-                        <div id="listCitySidebarInner"></div>
-                    </div>
-                    <!-- 오른쪽 분류+장소 -->
-                    <div id="fullListContainer" class="flex-1 overflow-y-auto custom-scrollbar bg-white"></div>
-                </div>
-                <!-- 검색결과 (검색 중에만 표시) -->
-                <div id="listSearchResult" class="hidden flex-1 overflow-y-auto p-4 bg-gray-50 custom-scrollbar"></div>
-            </div>
+    <h1>내가 다닌 모든 장소를<br><span>도시별, 분류별</span>로 기록하세요</h1>
+    <p>PlaceKeeper는 방문한 장소를 GPS로 저장하고, 사진과 메모를 첨부해 나만의 장소 기록장을 만들어주는 앱입니다.</p>
+
+    <div class="btn-group">
+      <a href="https://play.google.com/store/apps/details?id=com.newjju.placekeeperapp" class="btn-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+          <path d="M3 20.5v-17c0-.83 1-.93 1.37-.43l14 8.5a.5.5 0 010 .86l-14 8.5C4 21.43 3 21.33 3 20.5z"/>
+        </svg>
+        구글 플레이에서 다운로드
+      </a>
+      <a href="#privacy" class="btn-secondary">개인정보처리방침 보기</a>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section class="features" id="features">
+    <p class="section-title">PlaceKeeper의 <span>핵심 기능</span></p>
+    <p class="section-sub">장소 기록을 더 쉽고 스마트하게</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="24" height="24" fill="none" stroke="#ec4899" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
         </div>
-        </div>            
-            
-        <style>
-            .am-chip {
-                display: inline-flex; align-items: center; gap: 6px;
-                background: #ec4899; color: white;
-                padding: 6px 12px 6px 14px; border-radius: 999px;
-                font-size: 12px; font-weight: 800;
-            }
-            .am-chip button { background: rgba(255,255,255,0.3); border: none; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; display:flex; align-items:center; justify-content:center; padding:0; }
-            .am-chip button svg { width: 10px; height: 10px; stroke: white; stroke-width: 2.5; }
-            .am-option-btn {
-                padding: 7px 14px; border-radius: 12px; font-size: 12px; font-weight: 700;
-                border: 1.5px solid #fce7f3; color: #ec4899; background: white;
-                cursor: pointer; transition: all 0.15s;
-            }
-            .am-option-btn:active { transform: scale(0.95); }
-            .am-option-btn.selected { background: #ec4899; color: white; border-color: #ec4899; }
-            .am-option-btn.new-btn { border-style: dashed; color: #f9a8d4; border-color: #f9a8d4; }
-            .am-section { transition: all 0.2s ease; }
-            #addModal_cityNewInput, #addModal_catNewInput {
-                margin-top: 8px; width: 100%; background: #f9fafb;
-                border: 1.5px solid #fce7f3; border-radius: 16px;
-                padding: 10px 16px; font-size: 13px; outline: none;
-            }
-            #addModal_cityNewInput:focus, #addModal_catNewInput:focus { border-color: #f9a8d4; box-shadow: 0 0 0 3px #fce7f3; }
-        </style>
+        <h3>GPS 현재 위치 저장</h3>
+        <p>버튼 하나로 현재 위치를 저장하고 카카오 API로 정확한 주소를 자동 입력해드려요.</p>
+      </div>
 
-        <div id="addPlaceModal" class="fixed inset-0 z-[120] modal-overlay opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
-            <div class="bg-white w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl transform scale-95 transition-transform duration-300 flex flex-col">
-                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
-                    <h2 class="text-lg font-black text-gray-800">새 장소 추가</h2>
-                    <button onclick="closeAddModal()" class="p-2 text-gray-400">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                <div class="p-6 space-y-5">
-
-                    <!-- 현재 위치에 저장 체크박스 -->
-                    <div id="addModal_quickSaveWrap" class="hidden">
-                        <label class="flex items-center gap-3 cursor-pointer bg-pink-50 border border-pink-100 rounded-2xl px-4 py-3 select-none active-scale transition-all" id="addModal_quickSaveLabel">
-                            <div class="relative shrink-0">
-                                <input type="checkbox" id="addModal_quickSaveCheck" onchange="toggleQuickSave(this)" class="sr-only peer">
-                                <div class="w-5 h-5 rounded-md border-2 border-pink-300 bg-white peer-checked:bg-pink-500 peer-checked:border-pink-500 transition-all flex items-center justify-center">
-                                    <svg id="addModal_checkIcon" class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-[11px] font-black text-pink-500" id="addModal_quickSaveTitle">현재 선택된 위치에 저장</p>
-                                <p class="text-[10px] text-pink-400 font-medium truncate" id="addModal_quickSaveDesc"></p>
-                            </div>
-                        </label>
-                    </div>
-
-                    <!-- 도시 섹션 -->
-                    <div id="addModal_citySection" class="am-section hidden">
-                        <!-- 미선택 상태: 버튼 목록 -->
-                        <div id="addModal_cityPicker">
-                            <p class="text-[10px] font-bold text-pink-500 mb-2 uppercase tracking-wide">도시 선택</p>
-                            <div class="flex flex-wrap gap-2" id="addModal_cityOptions"></div>
-                            <input type="text" id="addModal_cityNewInput" placeholder="새 도시 이름 입력..." style="display:none">
-                        </div>
-                        <!-- 선택 완료 상태: 칩 -->
-                        <div id="addModal_cityChip" class="hidden flex items-center gap-2">
-                            <p class="text-[10px] font-bold text-pink-400 uppercase tracking-wide mr-1">도시</p>
-                            <span class="am-chip" id="addModal_cityChipLabel">
-                                <span id="addModal_cityChipText"></span>
-                                <button onclick="resetAddModalCity()">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- 분류 섹션 -->
-                    <div id="addModal_catSection" class="am-section hidden">
-                        <!-- 미선택 상태: 버튼 목록 -->
-                        <div id="addModal_catPicker">
-                            <p class="text-[10px] font-bold text-pink-500 mb-2 uppercase tracking-wide" id="addModal_catLabel">분류 선택</p>
-                            <div class="flex flex-wrap gap-2" id="addModal_catOptions"></div>
-                            <input type="text" id="addModal_catNewInput" placeholder="새 분류 이름 입력..." style="display:none">
-                        </div>
-                        <!-- 선택 완료 상태: 칩 -->
-                        <div id="addModal_catChip" class="hidden flex items-center gap-2">
-                            <p class="text-[10px] font-bold text-pink-400 uppercase tracking-wide mr-1">분류</p>
-                            <span class="am-chip">
-                                <span id="addModal_catChipText"></span>
-                                <button onclick="resetAddModalCat()">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- 구분선 (도시/분류 섹션이 있을 때만 표시) -->
-                    <div id="addModal_divider" class="hidden border-t border-gray-100"></div>
-
-                    <!-- 장소 이름 -->
-                    <div>
-                        <label class="text-[10px] font-bold text-pink-500 block mb-1.5 ml-1 uppercase">장소 이름</label>
-                        <input type="text" id="newPlaceName" placeholder="예: 성심당" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-pink-200 outline-none">
-                    </div>
-                    <!-- 상세 주소 -->
-                    <div>
-                        <label class="text-[10px] font-bold text-pink-500 block mb-1.5 ml-1 uppercase">상세 주소</label>
-                        <input type="text" id="newPlaceAddress" placeholder="주소를 입력하세요" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-pink-200 outline-none">
-                    </div>
-                    <!-- 저장 위치 안내 -->
-                    <div id="addModal_targetInfo" class="hidden bg-pink-50 rounded-2xl px-4 py-3 flex items-center gap-2">
-                        <span class="text-pink-400 text-sm">📍</span>
-                        <p class="text-[12px] text-pink-500 font-bold" id="addModal_targetText"></p>
-                    </div>
-                    <div>
-                        <button onclick="confirmAddPlace()" class="w-full py-4 bg-gray-800 text-white rounded-2xl text-[14px] font-black shadow-lg active-scale">저장하기</button>
-                    </div>
-                </div>
-            </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="24" height="24" fill="none" stroke="#ec4899" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+          </svg>
         </div>
+        <h3>도시 & 분류 관리</h3>
+        <p>서울, 대전, 광주 등 도시별로 나누고 카페, 맛집, 직장 등 원하는 분류로 정리하세요.</p>
+      </div>
 
-        <!-- 도시추가 모달 -->
-
-        <div id="addItemModal" class="fixed inset-0 z-[130] modal-overlay opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
-            <div class="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl transform scale-95 transition-transform duration-300 flex flex-col">
-                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
-                    <h2 id="addItemTitle" class="text-lg font-black text-gray-800">도시 추가</h2>
-                    <button onclick="closeAddItemModal()" class="p-2 text-gray-400">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                <div class="p-6 space-y-4">
-                <div>
-                <label id="addItemLabel" class="text-[10px] font-bold text-pink-500 block mb-1.5 ml-1 uppercase">새로운 도시 이름</label>
-                <input type="text" id="addItemInput" placeholder="이름을 입력하세요" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-pink-200 outline-none">
-                </div>
-                <div class="pt-2">
-                <button id="addItemConfirmBtn" class="w-full py-4 bg-gray-800 text-white rounded-2xl text-[14px] font-black shadow-lg active-scale">추가하기</button>
-                    </div>
-                </div>
-            </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="24" height="24" fill="none" stroke="#ec4899" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
         </div>
+        <h3>사진 첨부</h3>
+        <p>장소마다 사진을 여러 장 첨부해 기억을 더 생생하게 남길 수 있어요.</p>
+      </div>
 
-
-        <div id="detailModal" class="fixed inset-0 z-[160] flex items-end sm:items-center justify-center modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
-            <div class="bg-white w-full max-w-md rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl transform translate-y-full transition-transform duration-300">
-                <div id="modalPhoto" class="h-48 bg-pink-50 flex items-center justify-center relative cursor-pointer group" onclick="triggerModalPhotoUpload()" style="background-size:cover;background-position:center;">
-                    <span id="modalPhotoText" class="text-pink-300 text-xs font-bold">장소 사진 추가</span>
-                    <div class="absolute inset-0 bg-black/20 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span class="bg-white/90 px-3 py-1.5 rounded-full text-[10px] font-bold text-gray-700">사진 변경</span>
-                    </div>
-                </div>
-                <input type="file" id="modalPhotoInput" class="hidden" accept="image/*" onchange="handleModalPhotoSelect(event)">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-5">
-                        <div class="flex items-center gap-2">
-                            <span id="modalCityBadge" class="text-[10px] font-bold text-pink-400 bg-pink-50 px-2 py-1 rounded-lg"></span>
-                            <span id="modalCatBadge" class="text-[10px] font-bold text-pink-300 bg-pink-50 px-2 py-1 rounded-lg"></span>
-                        </div>
-                        <button onclick="closeModal()" class="text-gray-300 hover:text-gray-500 p-1">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                    <div class="space-y-4 text-left">
-                        <div>
-                            <label class="text-[10px] font-bold text-pink-500 block mb-1.5 ml-1 uppercase">장소 이름</label>
-                            <input type="text" id="modalNameInput" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-pink-200 outline-none" placeholder="장소 이름">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-pink-500 block mb-1.5 ml-1 uppercase">주소</label>
-                            <input type="text" id="modalAddressInput" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-600 focus:ring-2 focus:ring-pink-200 outline-none" placeholder="주소">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 block mb-1.5 ml-1 uppercase">Memory / Note</label>
-                            <textarea id="modalMemo" class="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-[13px] text-gray-700 h-24 focus:outline-none focus:ring-1 focus:ring-pink-200 transition-all resize-none" placeholder="이 장소에 대한 추억이나 메모를 남겨주세요."></textarea>
-                        </div>
-                        <button onclick="saveDetail()" class="w-full py-4 bg-gray-800 text-white rounded-2xl text-[14px] font-black shadow-lg active-scale">저장하기</button>
-                    </div>
-                </div>
-            </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="24" height="24" fill="none" stroke="#ec4899" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+          </svg>
         </div>
+        <h3>구글 드라이브 백업</h3>
+        <p>구글 계정으로 로그인하면 내 장소 데이터를 드라이브에 자동 백업하고 언제든 복원할 수 있어요.</p>
+      </div>
 
-        <!-- 설정 패널 -->
-        <div id="settingsPanel" class="fixed inset-0 z-[200] flex">
-            <!-- 딤 배경 (왼쪽 영역 클릭 시 닫기) -->
-            <div class="flex-1 bg-black/30" onclick="closeSettings()"></div>
-            <!-- 패널 본체 -->
-            <div class="w-[85vw] max-w-sm bg-white h-full flex flex-col shadow-2xl overflow-y-auto custom-scrollbar">
-                <!-- 헤더 -->
-                <div class="flex items-center justify-between px-6 pt-12 pb-5 border-b border-gray-100">
-                    <div class="flex items-center gap-2">
-                        <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        <h2 class="text-lg font-black text-gray-800">설정</h2>
-                    </div>
-                    <button onclick="closeSettings()" class="p-2 text-gray-400 hover:text-gray-600 active-scale">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </div>
-
-                <div class="flex-1 p-5 space-y-3">
-
-                    <!-- 화면 설정 섹션 -->
-                    <p class="text-[10px] font-black text-pink-400 uppercase tracking-widest px-1 pt-1">화면</p>
-
-                    <!-- 다크모드 토글 -->
-                    <div class="bg-gray-50 rounded-2xl px-4 py-4 flex items-center justify-between border border-gray-100">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center shrink-0">
-                                <svg class="w-4.5 h-4.5 text-pink-400" style="width:18px;height:18px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-sm font-bold text-gray-800">다크 모드</p>
-                                <p class="text-[10px] text-gray-400" id="darkModeLabel">현재: 라이트 모드</p>
-                            </div>
-                        </div>
-                        <label class="flex items-center cursor-pointer">
-                            <input type="checkbox" id="darkModeToggle" class="hidden" onchange="toggleDarkMode(this)">
-                            <div id="darkModeBg" class="toggle-bg bg-gray-200 w-12 h-6 rounded-full relative shadow-inner">
-                                <div id="darkModeDot" class="toggle-dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow-sm"></div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <!-- 데이터 관리 섹션 -->
-                    <p class="text-[10px] font-black text-pink-400 uppercase tracking-widest px-1 pt-3">데이터 관리</p>
-
-                    <!-- JSON 내보내기 -->
-                    <div class="bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 border border-gray-100">
-                        <div class="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center shrink-0">
-                            <svg style="width:18px;height:18px" class="text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold text-gray-800">JSON 내보내기</p>
-                            <p class="text-[10px] text-gray-400">앱 전용 백업 파일</p>
-                        </div>
-                        <button onclick="exportJSON()" class="shrink-0 bg-pink-500 text-white text-[11px] font-black px-3 py-2 rounded-xl active-scale">내보내기</button>
-                    </div>
-
-                    <!-- 엑셀 내보내기 -->
-                    <div class="bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 border border-gray-100">
-                        <div class="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-                            <svg style="width:18px;height:18px" class="text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold text-gray-800">엑셀 내보내기</p>
-                            <p class="text-[10px] text-gray-400">Excel(.xlsx)로 저장</p>
-                        </div>
-                        <button onclick="exportExcel()" class="shrink-0 bg-green-500 text-white text-[11px] font-black px-3 py-2 rounded-xl active-scale">내보내기</button>
-                    </div>
-
-                    <!-- 불러오기 (JSON / 엑셀 통합) -->
-                    <div class="bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 border border-gray-100">
-                        <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                            <svg style="width:18px;height:18px" class="text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold text-gray-800">데이터 불러오기</p>
-                            <p class="text-[10px] text-gray-400">JSON 또는 Excel 파일</p>
-                        </div>
-                        <button onclick="document.getElementById('importFileInput').click()" class="shrink-0 bg-blue-400 text-white text-[11px] font-black px-3 py-2 rounded-xl active-scale">불러오기</button>
-                        <input type="file" id="importFileInput" accept=".json,.xlsx,.xls" class="hidden" onchange="importFile(event)">
-                    </div>
-
-                    <!-- 앱 정보 섹션 -->
-                    <p class="text-[10px] font-black text-pink-400 uppercase tracking-widest px-1 pt-3">앱 정보</p>
-
-                    <!-- 버전 -->
-                    <div class="bg-gray-50 rounded-2xl px-4 py-4 flex items-center gap-3 border border-gray-100">
-                        <div class="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center shrink-0">
-                            <svg style="width:18px;height:18px" class="text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-bold text-gray-800">버전</p>
-                            <p class="text-[11px] text-gray-400 font-medium">v1.0.0</p>
-                        </div>
-                    </div>
-
-                    <!-- 개발자 연락처 -->
-                    <div class="bg-gray-50 rounded-2xl px-4 py-4 flex items-center gap-3 border border-gray-100">
-                        <div class="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center shrink-0">
-                            <svg style="width:18px;height:18px" class="text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold text-gray-800">개발자 연락처</p>
-                            <a href="/cdn-cgi/l/email-protection#482c2d3e083824292b2d232d2d382d3a66293838" class="text-[11px] text-pink-400 font-medium truncate block hover:underline"><span class="__cf_email__" data-cfemail="badedfccfacad6dbd9dfd1dfdfcadfc894dbcaca">[email&#160;protected]</span></a>
-                        </div>
-                    </div>
-
-                    <!-- 앱 이름 / 카피라이트 -->
-                    <div class="pt-6 pb-2 text-center">
-                        <p class="text-xs font-black text-pink-300 tracking-widest">PlaceKeeper</p>
-                        <p class="text-[10px] text-gray-300 mt-1">© 2025 PlaceKeeper. All rights reserved.</p>
-                    </div>
-                </div>
-            </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="24" height="24" fill="none" stroke="#ec4899" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+          </svg>
         </div>
+        <h3>장소 공유</h3>
+        <p>저장된 장소 주소를 카카오톡, 문자 등으로 손쉽게 공유할 수 있어요.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="24" height="24" fill="none" stroke="#ec4899" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <h3>엑셀 / JSON 내보내기</h3>
+        <p>내 장소 데이터를 엑셀이나 JSON 파일로 내보내 PC에서도 활용하세요.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section class="privacy" id="privacy">
+    <h2>개인정보처리방침</h2>
+    <p class="privacy-date">PlaceKeeper는 사용자의 개인정보를 소중히 보호합니다.</p>
+    <div class="privacy-highlight">
+      <p>🔒 PlaceKeeper는 사용자의 위치 정보를 외부 서버에 저장하거나 전송하지 않습니다. 모든 데이터는 사용자의 기기 내부에만 저장됩니다.</p>
+    </div>
+    <br>
+    <a href="privacy-policy.html" class="btn-primary" style="display:inline-flex; margin-top:8px;">
+      📄 개인정보처리방침 전문 보기
+    </a>
+  </section>
+
+  <footer>
+    <p class="footer-logo">Place<span>Keeper</span></p>
+    <p>내가 다닌 모든 장소를 기록하는 앱</p>
+    <p style="margin-top:8px;">
+      <a href="#privacy">개인정보처리방침</a> &nbsp;·&nbsp;
+      <a href="mailto:mi1re12@hanmail.net">mi1re12@hanmail.net</a>
+    </p>
+    <p style="margin-top:16px; font-size:12px;">© 2025 PlaceKeeper. All rights reserved.</p>
+  </footer>
 
-        <div id="toast" class="fixed bottom-28 left-1/2 -translate-x-1/2 bg-gray-900/95 text-white text-[11px] px-5 py-3 rounded-full opacity-0 transition-all transform translate-y-4 pointer-events-none z-[200] font-bold"></div>
-    </div> 
-       
-
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-        const state = {
-            cities: ['서울', '대전', '광주'],
-            categories: {'서울':['카페', '직장', '맛집'],'대전':['카페', '직장', '맛집'],'광주':['카페', '직장', '맛집']},
-            selectedCity: null,
-            selectedCat: null,
-            sort: { city: false, category: false },
-            places: [],
-            currentDetailId: null,
-            mainPhoto: null
-        };
-
-        const dom = {
-            cityBtn: document.getElementById('cityBtn'),
-            cityList: document.getElementById('cityList'),
-            cityText: document.getElementById('cityText'),
-            catBtn: document.getElementById('catBtn'),
-            catList: document.getElementById('catList'),
-            catText: document.getElementById('catText'),
-            placeList: document.getElementById('placeList'),
-            toast: document.getElementById('toast'),
-            photoDisplay: document.getElementById('photoDisplay'),
-            photoPlaceholder: document.getElementById('photoPlaceholder'),
-            photoControls: document.getElementById('photoControls'),
-            photoInput: document.getElementById('photoInput'),
-            detailModal: document.getElementById('detailModal'),
-            modalMemo: document.getElementById('modalMemo'),
-            modalPhoto: document.getElementById('modalPhoto'),
-            modalPhotoInput: document.getElementById('modalPhotoInput'),
-            modalPhotoText: document.getElementById('modalPhotoText')
-        };
-
-        function init() {
-            
-            const saved = localStorage.getItem('placeKeeperData');
-            
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                Object.assign(state, parsed);
-                state.selectedCity = null;
-                state.selectedCat = null;
-
-                if (state.mainPhoto) {
-                    dom.photoDisplay.style.backgroundImage = `url('${state.mainPhoto}')`;
-                    dom.photoPlaceholder.classList.add('hidden');
-                    dom.photoControls.classList.remove('hidden');
-                }
-                if (Array.isArray(state.categories)) {
-                    const oldCats = state.categories;
-                    state.categories = {};
-                    state.cities.forEach(city => {
-                        state.categories[city] = [...oldCats];
-                    });
-                }
-            }
-            renderDropdown('city');
-            renderDropdown('category');
-            renderPlaces();
-
-            dom.cityBtn.onclick = (e) => { e.stopPropagation(); toggleDropdown('city'); };
-            dom.catBtn.onclick = (e) => { e.stopPropagation(); toggleDropdown('category'); };
-            window.onclick = () => { dom.cityList.classList.add('hidden'); dom.catList.classList.add('hidden'); };
-        }
-
-        function syncStorage() {
-            localStorage.setItem('placeKeeperData', JSON.stringify(state));
-        }
-
-
-
-        // --- 사진 관리 ---
-        function triggerPhotoUpload() { dom.photoInput.click(); }
-        function handlePhotoSelect(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const imgData = e.target.result;
-                    dom.photoDisplay.style.backgroundImage = `url('${imgData}')`;
-                    dom.photoPlaceholder.classList.add('hidden');
-                    dom.photoControls.classList.remove('hidden');
-                    state.mainPhoto = imgData;
-                    syncStorage();
-                    toast('대표 사진 설정 완료');
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-        function removePhoto() {
-            dom.photoDisplay.style.backgroundImage = '';
-            dom.photoPlaceholder.classList.remove('hidden');
-            dom.photoControls.classList.add('hidden');
-            dom.photoInput.value = '';
-            state.mainPhoto = null;
-            syncStorage();
-            toast('사진 삭제 완료');
-        }
-
-        // --- 드롭다운 & 리스트 ---
-        function toggleDropdown(type) {
-            const list = type === 'city' ? dom.cityList : dom.catList;
-            const otherList = type === 'city' ? dom.catList : dom.cityList;
-            otherList.classList.add('hidden');
-            list.classList.toggle('hidden');
-        }
-
-        // 1. 정렬 토글 함수 (상태 저장 및 즉시 반영)
-        window.toggleSort = (type, checkbox) => {
-            state.sort[type] = checkbox.checked;
-            
-            // UI 애니메이션 (토글 스위치)
-            const dot = checkbox.nextElementSibling.querySelector('.toggle-dot');
-            const bg = checkbox.nextElementSibling;
-            if (checkbox.checked) {
-                bg.classList.replace('bg-gray-200', 'bg-pink-500');
-                dot.style.transform = 'translateX(12px)';
-            } else {
-                bg.classList.replace('bg-pink-500', 'bg-gray-200');
-                dot.style.transform = 'translateX(0)';
-            }
-            renderDropdown(type);
-            renderPlaces(); // 정렬 즉시 반영
-        };
-        
-
-        // [수정] 드롭다운 렌더링 함수 (로직 강화 버전)
-        function renderDropdown(type) {
-            
-            const list = type === 'city' ? dom.cityList : dom.catList;
-            let items = type === 'city' ? state.cities : (state.categories[state.selectedCity] || []);
-            
-            // 현재 선택된 도시 값 확인 (공백 제거 및 확실한 체크)
-            const currentCity = state.selectedCity ? String(state.selectedCity).trim() : '';
-            const isCityValid = currentCity !== '' && currentCity !== '도시 선택';
-
-            list.innerHTML = '';
-
-            
-            // 이름순 정렬
-            if (state.sort[type]) {
-                items = [...items].sort((a, b) => a.localeCompare(b, 'ko'));
-            }
-
-            // 분류(category) 드롭다운인데 도시가 선택되지 않은 경우
-            if (type === 'category' && !isCityValid) {
-                list.innerHTML = '<div class="p-4 text-[11px] text-gray-400 text-center font-bold">도시를 먼저 선택해주세요</div>';
-                return;
-            }
-
-            
-
-            // 목록 아이템 생성
-            items.forEach(item => {
-                const row = document.createElement('div');
-                row.className = 'px-4 py-3 text-xs font-medium text-gray-700 hover:bg-pink-50 hover:text-pink-500 cursor-pointer border-b border-gray-50 flex items-center justify-between group';
-                
-                // 텍스트 영역
-                const textSpan = document.createElement('span');
-                textSpan.className = 'flex-1';
-                textSpan.innerText = item;
-                        
-                // 삭제 버튼 (X)
-                const delBtn = document.createElement('button');
-                delBtn.className = 'ml-auto p-1 text-gray-300 hover:text-red-500 transition-colors flex items-center justify-center self-center';
-                delBtn.innerHTML = `
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                `;
-                
-                // 삭제 클릭 이벤트
-                delBtn.onclick = (e) => {
-                    e.stopPropagation(); // 드롭다운이 닫히거나 항목이 선택되는 것 방지
-                    deleteItem(e, type, item);
-                };        
-                
-                
-                row.onclick = () => {
-                    if (type === 'city') {
-                        state.selectedCity = item;
-                        state.selectedCat = null; 
-                        dom.cityText.innerText = item;
-                        dom.catText.innerText = '분류 선택';
-                        
-                        // [중요] 도시 선택 즉시 분류 드롭다운의 "도시선택" 경고를 제거하기 위해 다시 렌더링
-                        renderDropdown('category'); 
-                    } else {
-                        state.selectedCat = item;
-                        dom.catText.innerText = item;
-                    }
-                    list.classList.add('hidden');
-                    renderPlaces();
-                };
-                row.appendChild(textSpan);
-                row.appendChild(delBtn);
-                list.appendChild(row);
-            });
-        }
-
-        // 2. 메인 렌더링 함수 (정렬 로직 포함 수정본)
-        function renderPlaces() {
-            dom.placeList.innerHTML = '';
-            
-            const isCitySelected = state.selectedCity && state.selectedCity !== '도시 선택';
-            const isCatSelected = state.selectedCat && state.selectedCat !== '분류 선택';
-
-            // 필터 인디케이터 업데이트
-            const cityDisplay = document.getElementById('activeCityDisplay');
-            const catDisplay = document.getElementById('activeCatDisplay');
-            if (cityDisplay) cityDisplay.innerText = isCitySelected ? `도시: ${state.selectedCity}` : '도시: 전체';
-            if (catDisplay) catDisplay.innerText = isCatSelected ? `분류: ${state.selectedCat}` : '분류: 전체';
-
-            // 2. 미선택 시 안내 문구
-            if (!isCitySelected || !isCatSelected) {
-                dom.placeList.innerHTML = `
-                    <div class="col-span-full py-24 text-center">
-                        <p class="text-gray-300 text-[13px] font-bold">
-                            도시와 분류를 모두 선택하면<br>저장된 장소 목록이 나타납니다.
-                        </p>
-                    </div>`;
-                return;
-            }
-
-            // [1단계] 데이터 필터링
-            let filtered = state.places.filter(p => 
-                p.city === state.selectedCity && 
-                p.cat === state.selectedCat
-            );
-
-            // [2단계] 핵심: 정렬 로직 추가 (스위치가 켜져있을 때만 작동)
-            if (state.sort.city === true) {
-                filtered.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-            }
-
-            // 5. 결과가 없을 때 처리
-            if (filtered.length === 0) {
-                dom.placeList.innerHTML = `
-                    <div class="col-span-full py-20 text-center opacity-30 text-[12px] font-bold">
-                        선택한 조건에 등록된 장소가 없습니다.
-                    </div>`;
-                return;
-            }
-
-            // 6. 실제 카드 렌더링
-            filtered.forEach(p => {
-                const card = document.createElement('div');
-                card.className = 'bg-white rounded-[24px] p-5 border border-pink-100 shadow-sm text-left';
-                card.innerHTML = `
-                    <div class="mb-4">
-                        <div class="flex justify-between items-center mb-1">
-                            <h3 class="text-pink-500 font-black text-lg">${p.name}</h3>
-                            <span class="text-[9px] font-bold text-pink-400 bg-pink-50 px-2 py-0.5 rounded-full">${p.city} | ${p.cat}</span>
-                        </div>
-                        <p class="text-[11px] text-gray-400 font-medium truncate">${p.address}</p>
-                    </div>
-                    <div class="flex gap-1.5">
-                        <button onclick="copyToClipboard('${p.address}')" class="flex-1 py-2.5 bg-pink-50 text-pink-500 text-[10px] font-black rounded-xl border border-pink-100 active:scale-95 transition-all">주소복사</button>
-                        <button onclick="openDetail(${p.id})" class="flex-1 py-2.5 bg-white text-pink-500 text-[10px] font-black rounded-xl border border-pink-100 shadow-sm active:scale-95 transition-all">상세보기</button>
-                        <button onclick="deletePlace(${p.id})" class="p-2 text-gray-300">✕</button>
-                    </div>
-                `;
-                dom.placeList.appendChild(card);
-            });
-        }
-
-                function copyToClipboard(text) {
-                    navigator.clipboard.writeText(text).then(() => toast('주소가 복사되었습니다.'));
-                }
-
-
-
-        // 모달 내 선택 상태 임시 저장
-        const addModalState = { city: null, cat: null };
-
-        // ── 저장위치 안내 업데이트 ──
-        function updateAddModalTargetInfo() {
-            const infoDiv = document.getElementById('addModal_targetInfo');
-            const infoText = document.getElementById('addModal_targetText');
-            const divider = document.getElementById('addModal_divider');
-
-            const cityNew = document.getElementById('addModal_cityNewInput');
-            const catNew = document.getElementById('addModal_catNewInput');
-
-            const city = addModalState.city === '__new__'
-                ? (cityNew ? cityNew.value.trim() : '')
-                : (addModalState.city || ((state.selectedCity !== '도시 선택') ? state.selectedCity : null));
-
-            const cat = addModalState.cat === '__new__'
-                ? (catNew ? catNew.value.trim() : '')
-                : (addModalState.cat || ((state.selectedCat !== '분류 선택') ? state.selectedCat : null));
-
-            const hasSections = !document.getElementById('addModal_citySection').classList.contains('hidden')
-                             || !document.getElementById('addModal_catSection').classList.contains('hidden');
-            if (divider) divider.classList.toggle('hidden', !hasSections);
-
-            if (city && cat) {
-                infoText.textContent = `저장 위치: ${city} › ${cat}`;
-                infoDiv.classList.remove('hidden');
-            } else {
-                infoDiv.classList.add('hidden');
-            }
-        }
-
-        // ── 분류 옵션 버튼 렌더링 ──
-        function renderAddModalCatOptions(city) {
-            const container = document.getElementById('addModal_catOptions');
-            const newInput = document.getElementById('addModal_catNewInput');
-            container.innerHTML = '';
-            newInput.style.display = 'none';
-            newInput.value = '';
-            // 칩 초기화
-            document.getElementById('addModal_catChip').classList.add('hidden');
-            document.getElementById('addModal_catPicker').classList.remove('hidden');
-            addModalState.cat = null;
-
-            const cats = state.categories[city] || [];
-            cats.forEach(cat => {
-                const btn = document.createElement('button');
-                btn.className = 'am-option-btn';
-                btn.textContent = cat;
-                btn.onclick = () => selectAddModalCat(cat);
-                container.appendChild(btn);
-            });
-
-            const newBtn = document.createElement('button');
-            newBtn.className = 'am-option-btn new-btn';
-            newBtn.textContent = '+ 직접 입력';
-            newBtn.onclick = () => {
-                container.querySelectorAll('.am-option-btn').forEach(b => b.classList.remove('selected'));
-                newBtn.classList.add('selected');
-                addModalState.cat = '__new__';
-                newInput.style.display = 'block';
-                newInput.focus();
-                updateAddModalTargetInfo();
-            };
-            container.appendChild(newBtn);
-            newInput.oninput = () => updateAddModalTargetInfo();
-        }
-
-        // ── 분류 선택 확정 → 칩으로 교체 ──
-        function selectAddModalCat(cat) {
-            addModalState.cat = cat;
-            document.getElementById('addModal_catNewInput').style.display = 'none';
-            document.getElementById('addModal_catChipText').textContent = cat;
-            document.getElementById('addModal_catPicker').classList.add('hidden');
-            document.getElementById('addModal_catChip').classList.remove('hidden');
-            updateAddModalTargetInfo();
-        }
-
-        // ── 분류 칩 취소 → 다시 picker ──
-        window.resetAddModalCat = () => {
-            addModalState.cat = null;
-            document.getElementById('addModal_catChip').classList.add('hidden');
-            document.getElementById('addModal_catPicker').classList.remove('hidden');
-            document.getElementById('addModal_catNewInput').style.display = 'none';
-            document.getElementById('addModal_catOptions').querySelectorAll('.am-option-btn').forEach(b => b.classList.remove('selected'));
-            updateAddModalTargetInfo();
-        };
-
-        // ── 도시 선택 확정 → 칩으로 교체 + 분류 섹션 오픈 ──
-        function selectAddModalCity(city) {
-            addModalState.city = city;
-            document.getElementById('addModal_cityNewInput').style.display = 'none';
-            document.getElementById('addModal_cityChipText').textContent = city;
-            document.getElementById('addModal_cityPicker').classList.add('hidden');
-            document.getElementById('addModal_cityChip').classList.remove('hidden');
-
-            const catSection = document.getElementById('addModal_catSection');
-            catSection.classList.remove('hidden');
-            document.getElementById('addModal_catLabel').textContent = `'${city}' 의 어떤 분류에 넣으시겠습니까?`;
-            renderAddModalCatOptions(city);
-            updateAddModalTargetInfo();
-        }
-
-        // ── 도시 칩 취소 → 다시 picker + 분류 섹션 닫기 ──
-        window.resetAddModalCity = () => {
-            addModalState.city = null;
-            addModalState.cat = null;
-            document.getElementById('addModal_cityChip').classList.add('hidden');
-            document.getElementById('addModal_cityPicker').classList.remove('hidden');
-            document.getElementById('addModal_cityNewInput').style.display = 'none';
-            document.getElementById('addModal_cityOptions').querySelectorAll('.am-option-btn').forEach(b => b.classList.remove('selected'));
-            document.getElementById('addModal_catSection').classList.add('hidden');
-            updateAddModalTargetInfo();
-        };
-
-        // 1. 모달 열기
-        window.addPlaceAction = () => {
-            const modal = document.getElementById('addPlaceModal');
-            const content = modal.querySelector('div');
-
-            document.getElementById('newPlaceName').value = '';
-            document.getElementById('newPlaceAddress').value = '';
-            addModalState.city = null;
-            addModalState.cat = null;
-
-            const citySection = document.getElementById('addModal_citySection');
-            const catSection = document.getElementById('addModal_catSection');
-            const infoDiv = document.getElementById('addModal_targetInfo');
-            const divider = document.getElementById('addModal_divider');
-            const quickWrap = document.getElementById('addModal_quickSaveWrap');
-            const quickCheck = document.getElementById('addModal_quickSaveCheck');
-            const checkIcon = document.getElementById('addModal_checkIcon');
-
-            infoDiv.classList.add('hidden');
-            divider.classList.add('hidden');
-
-            // 칩/picker 초기화
-            document.getElementById('addModal_cityChip').classList.add('hidden');
-            document.getElementById('addModal_cityPicker').classList.remove('hidden');
-            document.getElementById('addModal_catChip').classList.add('hidden');
-            document.getElementById('addModal_catPicker').classList.remove('hidden');
-            document.getElementById('addModal_cityNewInput').style.display = 'none';
-            document.getElementById('addModal_cityNewInput').value = '';
-            document.getElementById('addModal_catNewInput').style.display = 'none';
-            document.getElementById('addModal_catNewInput').value = '';
-
-            const hasCity = state.selectedCity && state.selectedCity !== '도시 선택';
-            const hasCat = state.selectedCat && state.selectedCat !== '분류 선택';
-
-            // ── 체크박스 초기화 ──
-            quickCheck.checked = false;
-            checkIcon.classList.add('hidden');
-
-            if (hasCity || hasCat) {
-                // 선택된 도시/분류가 하나라도 있으면 체크박스 표시
-                quickWrap.classList.remove('hidden');
-                const desc = [hasCity ? state.selectedCity : null, hasCat ? state.selectedCat : null]
-                    .filter(Boolean).join(' › ');
-                document.getElementById('addModal_quickSaveDesc').textContent = desc;
-            } else {
-                quickWrap.classList.add('hidden');
-            }
-
-            if (hasCity && hasCat) {
-                // 둘 다 있으면 기본 체크 ON → 바로 저장 위치 표시
-                quickCheck.checked = true;
-                checkIcon.classList.remove('hidden');
-                citySection.classList.add('hidden');
-                catSection.classList.add('hidden');
-                document.getElementById('addModal_targetText').textContent = `저장 위치: ${state.selectedCity} › ${state.selectedCat}`;
-                infoDiv.classList.remove('hidden');
-
-            } else if (hasCity && !hasCat) {
-                // 도시만 → 분류 선택 UI
-                citySection.classList.add('hidden');
-                catSection.classList.remove('hidden');
-                divider.classList.remove('hidden');
-                document.getElementById('addModal_catLabel').textContent = `'${state.selectedCity}' 의 어떤 분류에 넣으시겠습니까?`;
-                renderAddModalCatOptions(state.selectedCity);
-
-            } else {
-                // 둘 다 없음 → 도시 선택 UI
-                _openAddModalCityPicker();
-            }
-
-            modal.classList.replace('opacity-0', 'opacity-100');
-            modal.classList.remove('pointer-events-none');
-            content.classList.replace('scale-95', 'scale-100');
-        };
-
-        // 도시 선택 picker 열기 (공통)
-        function _openAddModalCityPicker() {
-            const citySection = document.getElementById('addModal_citySection');
-            const catSection = document.getElementById('addModal_catSection');
-            const divider = document.getElementById('addModal_divider');
-            citySection.classList.remove('hidden');
-            catSection.classList.add('hidden');
-            divider.classList.remove('hidden');
-
-            const cityOptions = document.getElementById('addModal_cityOptions');
-            const cityNewInput = document.getElementById('addModal_cityNewInput');
-            cityOptions.innerHTML = '';
-            cityNewInput.style.display = 'none';
-            cityNewInput.value = '';
-
-            state.cities.forEach(city => {
-                const btn = document.createElement('button');
-                btn.className = 'am-option-btn';
-                btn.textContent = city;
-                btn.onclick = () => selectAddModalCity(city);
-                cityOptions.appendChild(btn);
-            });
-
-            const newCityBtn = document.createElement('button');
-            newCityBtn.className = 'am-option-btn new-btn';
-            newCityBtn.textContent = '+ 직접 입력';
-            newCityBtn.onclick = () => {
-                cityOptions.querySelectorAll('.am-option-btn').forEach(b => b.classList.remove('selected'));
-                newCityBtn.classList.add('selected');
-                addModalState.city = '__new__';
-                cityNewInput.style.display = 'block';
-                cityNewInput.focus();
-                catSection.classList.add('hidden');
-                updateAddModalTargetInfo();
-            };
-            cityOptions.appendChild(newCityBtn);
-
-            cityNewInput.oninput = () => {
-                const val = cityNewInput.value.trim();
-                if (val) {
-                    addModalState.city = '__new__';
-                    catSection.classList.remove('hidden');
-                    document.getElementById('addModal_catLabel').textContent = `'${val}' 의 어떤 분류에 넣으시겠습니까?`;
-                    renderAddModalCatOptions(val);
-                } else {
-                    catSection.classList.add('hidden');
-                }
-                updateAddModalTargetInfo();
-            };
-        }
-
-        // 체크박스 토글
-        window.toggleQuickSave = (checkbox) => {
-            const checkIcon = document.getElementById('addModal_checkIcon');
-            const citySection = document.getElementById('addModal_citySection');
-            const catSection = document.getElementById('addModal_catSection');
-            const infoDiv = document.getElementById('addModal_targetInfo');
-            const divider = document.getElementById('addModal_divider');
-            const hasCity = state.selectedCity && state.selectedCity !== '도시 선택';
-            const hasCat = state.selectedCat && state.selectedCat !== '분류 선택';
-
-            if (checkbox.checked) {
-                // 체크 ON → 선택된 도시/분류로 저장
-                checkIcon.classList.remove('hidden');
-                addModalState.city = null;
-                addModalState.cat = null;
-
-                if (hasCity && hasCat) {
-                    citySection.classList.add('hidden');
-                    catSection.classList.add('hidden');
-                    divider.classList.add('hidden');
-                    document.getElementById('addModal_targetText').textContent = `저장 위치: ${state.selectedCity} › ${state.selectedCat}`;
-                    infoDiv.classList.remove('hidden');
-                } else if (hasCity && !hasCat) {
-                    citySection.classList.add('hidden');
-                    catSection.classList.remove('hidden');
-                    divider.classList.remove('hidden');
-                    document.getElementById('addModal_catLabel').textContent = `'${state.selectedCity}' 의 어떤 분류에 넣으시겠습니까?`;
-                    renderAddModalCatOptions(state.selectedCity);
-                    infoDiv.classList.add('hidden');
-                }
-            } else {
-                // 체크 OFF → 직접 선택 UI로 전환
-                checkIcon.classList.add('hidden');
-                infoDiv.classList.add('hidden');
-                addModalState.city = null;
-                addModalState.cat = null;
-                // 칩 초기화
-                document.getElementById('addModal_cityChip').classList.add('hidden');
-                document.getElementById('addModal_cityPicker').classList.remove('hidden');
-                document.getElementById('addModal_catChip').classList.add('hidden');
-                document.getElementById('addModal_catPicker').classList.remove('hidden');
-                document.getElementById('addModal_cityNewInput').style.display = 'none';
-                document.getElementById('addModal_cityNewInput').value = '';
-                document.getElementById('addModal_catNewInput').style.display = 'none';
-                document.getElementById('addModal_catNewInput').value = '';
-                _openAddModalCityPicker();
-            }
-        };
-
-        // 2. 모달 닫기
-        window.closeAddModal = () => {
-            const modal = document.getElementById('addPlaceModal');
-            const content = modal.querySelector('div');
-            modal.classList.replace('opacity-100', 'opacity-0');
-            modal.classList.add('pointer-events-none');
-            content.classList.replace('scale-100', 'scale-95');
-        };
-
-        window.confirmAddPlace = () => {
-            const name = document.getElementById('newPlaceName').value.trim();
-            const address = document.getElementById('newPlaceAddress').value.trim();
-            if (!name || !address) return toast('이름과 주소를 입력해주세요.');
-
-            // 체크박스 ON이면 state.selected 우선, OFF면 addModalState(사용자가 직접 고른 값) 우선
-            const quickChecked = document.getElementById('addModal_quickSaveCheck')?.checked ?? true;
-
-            let finalCity, finalCat;
-
-            if (quickChecked) {
-                // 체크 ON → 현재 선택된 도시/분류 사용
-                finalCity = (state.selectedCity && state.selectedCity !== '도시 선택') ? state.selectedCity : null;
-                finalCat  = (state.selectedCat  && state.selectedCat  !== '분류 선택') ? state.selectedCat  : null;
-                // 분류 미선택이면 addModalState.cat 보완
-                if (!finalCat) {
-                    finalCat = addModalState.cat === '__new__'
-                        ? document.getElementById('addModal_catNewInput').value.trim()
-                        : addModalState.cat;
-                }
-            } else {
-                // 체크 OFF → addModalState 우선 (사용자가 직접 고른 값)
-                finalCity = addModalState.city === '__new__'
-                    ? document.getElementById('addModal_cityNewInput').value.trim()
-                    : addModalState.city;
-                finalCat  = addModalState.cat === '__new__'
-                    ? document.getElementById('addModal_catNewInput').value.trim()
-                    : addModalState.cat;
-                // addModalState가 비어있는 경우에만 state.selected 폴백
-                if (!finalCity) finalCity = (state.selectedCity && state.selectedCity !== '도시 선택') ? state.selectedCity : null;
-                if (!finalCat)  finalCat  = (state.selectedCat  && state.selectedCat  !== '분류 선택') ? state.selectedCat  : null;
-            }
-
-            if (!finalCity) return toast('도시를 선택해주세요.');
-            if (!finalCat)  return toast('분류를 선택해주세요.');
-
-            if (!state.cities.includes(finalCity)) {
-                state.cities.push(finalCity);
-                state.categories[finalCity] = [];
-                renderDropdown('city');
-            }
-            if (!state.categories[finalCity]) state.categories[finalCity] = [];
-            if (!state.categories[finalCity].includes(finalCat)) {
-                state.categories[finalCity].push(finalCat);
-                renderDropdown('category');
-            }
-
-            const newPlace = { id: Date.now(), name, address, city: finalCity, cat: finalCat, memo: '', photo: null };
-            state.places.unshift(newPlace);
-            state.selectedCity = finalCity;
-            state.selectedCat = finalCat;
-            dom.cityText.innerText = finalCity;
-            dom.catText.innerText = finalCat;
-
-            syncStorage();
-            renderPlaces();
-            closeAddModal();
-            toast(`'${finalCity}' › '${finalCat}' 에 저장되었습니다!`);
-        };
-        
-
-        window.saveCurrentLocation = () => {
-            if (!navigator.geolocation) return toast('GPS 미지원 기기입니다.');
-            toast('위치 확인 중...');
-
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-
-                // 역지오코딩 (Nominatim)
-                let addr = `위도: ${lat.toFixed(5)}, 경도: ${lon.toFixed(5)}`;
-                let detectedCity = null;
-                try {
-                    const res = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ko`,
-                        { headers: { 'Accept-Language': 'ko' } }
-                    );
-                    const data = await res.json();
-                    const c = data.address;
-                    // 주소 구성
-                    addr = [c.city || c.county || c.town || c.village, c.borough || c.suburb, c.road]
-                        .filter(Boolean).join(' ');
-                    if (!addr) addr = data.display_name || addr;
-                    // 도시 판별: 저장된 도시 중 일치하는 것 먼저, 없으면 API 값
-                    const apiCity = c.city || c.county || c.town || c.village || '';
-                    detectedCity = state.cities.find(city => apiCity.includes(city) || addr.includes(city)) || apiCity || '기타';
-                } catch(e) {
-                    // API 실패 시 좌표 범위로 폴백
-                    if (lat >= 37.4 && lat <= 37.7 && lon >= 126.8 && lon <= 127.2) detectedCity = '서울';
-                    else if (lat >= 36.1 && lat <= 36.5 && lon >= 127.2 && lon <= 127.5) detectedCity = '대전';
-                    else detectedCity = '기타';
-                }
-
-                const hasCity = state.selectedCity && state.selectedCity !== '도시 선택';
-                const hasCat = state.selectedCat && state.selectedCat !== '분류 선택';
-
-                // 실제 위치와 선택된 도시가 다른지 확인
-                const cityMismatch = hasCity && detectedCity &&
-                    detectedCity !== state.selectedCity &&
-                    !detectedCity.includes(state.selectedCity) &&
-                    !state.selectedCity.includes(detectedCity);
-
-                if (cityMismatch) {
-                    // ── 도시 불일치 → 경고 모달 ──
-                    if (!state.cities.includes(detectedCity)) {
-                        state.cities.push(detectedCity);
-                        state.categories[detectedCity] = [];
-                        renderDropdown('city');
-                    }
-                    openGpsMismatchModal(addr, state.selectedCity, detectedCity, hasCat ? state.selectedCat : null);
-                } else if (hasCity && hasCat) {
-                    // 도시 + 분류 모두 선택 & 일치 → 이름만 입력
-                    openGpsNameModal(addr, state.selectedCity, state.selectedCat);
-                } else if (hasCity && !hasCat) {
-                    // 도시만 선택 → 분류 선택 모달
-                    openGpsCatModal(addr, state.selectedCity);
-                } else {
-                    // 둘 다 없음 → 자동 감지 도시로
-                    if (!state.cities.includes(detectedCity)) {
-                        state.cities.push(detectedCity);
-                        state.categories[detectedCity] = [];
-                        renderDropdown('city');
-                    }
-                    openGpsCatModal(addr, detectedCity);
-                }
-            }, () => toast('위치 정보를 가져오는데 실패했습니다.'), { enableHighAccuracy: true });
-        };
-
-        // GPS 도시 불일치 경고 모달
-        function openGpsMismatchModal(addr, selectedCity, detectedCity, preselectedCat) {
-            const existing = document.getElementById('gpsCatModal');
-            if (existing) existing.remove();
-
-            const div = document.createElement('div');
-            div.id = 'gpsCatModal';
-            div.className = 'fixed inset-0 z-[150] modal-overlay flex items-center justify-center p-4';
-
-            // 분류 버튼 HTML (detectedCity 기준)
-            const cats = state.categories[detectedCity] || [];
-            const catBtns = cats.map(cat =>
-                `<button data-cat="${cat}" onclick="selectGpsCat('${cat}')" class="px-3 py-1.5 rounded-xl text-xs font-bold border border-pink-100 text-pink-500 bg-white active-scale">${cat}</button>`
-            ).join('') +
-            `<button onclick="document.getElementById('gpsCatNewInput').classList.toggle('hidden')" class="px-3 py-1.5 rounded-xl text-xs font-bold border border-dashed border-pink-200 text-pink-400 bg-white active-scale">+ 직접 입력</button>`;
-
-            div.innerHTML = `
-                <div class="bg-white w-full max-w-sm rounded-[28px] shadow-2xl overflow-hidden">
-                    <div class="p-5 border-b border-gray-100 flex justify-between items-center">
-                        <p class="text-base font-black text-gray-800">현재 위치 저장</p>
-                        <button onclick="document.getElementById('gpsCatModal').remove()" class="p-2 text-gray-300">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                        </button>
-                    </div>
-                    <div class="p-5 space-y-4">
-                        <!-- 불일치 경고 -->
-                        <div class="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
-                            <span class="text-lg shrink-0 mt-0.5">⚠️</span>
-                            <p class="text-[12px] text-amber-700 font-bold leading-relaxed">
-                                현재 있는 위치가 선택한 <span class="text-pink-500">${selectedCity}</span>와 달라<br>
-                                <span class="text-pink-500">${detectedCity}</span>으로 자동 저장됩니다.
-                            </p>
-                        </div>
-                        <!-- 분류 선택 -->
-                        <div>
-                            <p class="text-[10px] font-bold text-pink-500 mb-2 uppercase">'${detectedCity}' 의 어떤 분류에 넣으시겠습니까?</p>
-                            <div class="flex flex-wrap gap-2">${catBtns}</div>
-                            <input type="text" id="gpsCatNewInput" placeholder="새 분류 이름 입력..." class="hidden mt-2 w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-pink-200 outline-none">
-                        </div>
-                        <div id="gpsCatSelected" class="hidden bg-pink-50 rounded-2xl px-4 py-2 text-[11px] text-pink-500 font-bold"></div>
-                        <div>
-                            <p class="text-[10px] font-bold text-pink-500 mb-1.5 uppercase">장소 이름</p>
-                            <input type="text" id="gpsNameInput" placeholder="예: 내가 있는 곳" value="현재 위치" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-pink-200 outline-none">
-                        </div>
-                        <input type="hidden" id="gpsAddrHidden" value="${addr}">
-                        <input type="hidden" id="gpsCityHidden" value="${detectedCity}">
-                        <input type="hidden" id="gpsSelectedCatHidden" value="${preselectedCat || ''}">
-                        <button onclick="confirmGpsSave()" class="w-full py-3.5 bg-pink-500 text-white rounded-2xl text-[13px] font-black shadow-lg active-scale hover:bg-pink-600 transition-colors">저장하기</button>
-                    </div>
-                </div>`;
-            document.body.appendChild(div);
-
-            // 미리 선택된 분류가 있으면 자동 선택
-            if (preselectedCat && cats.includes(preselectedCat)) {
-                selectGpsCat(preselectedCat);
-            }
-        }
-
-                // GPS 분류 선택 모달 (인라인, prompt 없음)
-        function openGpsCatModal(addr, city) {
-            const existing = document.getElementById('gpsCatModal');
-            if (existing) existing.remove();
-
-            const cats = state.categories[city] || [];
-            const btnHtml = cats.map(cat =>
-                `<button data-cat="${cat}" onclick="selectGpsCat('${cat}')" class="px-3 py-1.5 rounded-xl text-xs font-bold border border-pink-100 text-pink-500 bg-white active-scale transition-all">${cat}</button>`
-            ).join('') +
-            `<button onclick="document.getElementById('gpsCatNewInput').classList.toggle('hidden')" class="px-3 py-1.5 rounded-xl text-xs font-bold border border-dashed border-pink-200 text-pink-400 bg-white active-scale">+ 직접 입력</button>`;
-
-            const div = document.createElement('div');
-            div.id = 'gpsCatModal';
-            div.className = 'fixed inset-0 z-[150] modal-overlay flex items-center justify-center p-4';
-            div.innerHTML = `
-                <div class="bg-white w-full max-w-sm rounded-[28px] shadow-2xl overflow-hidden">
-                    <div class="p-5 border-b border-gray-100 flex justify-between items-center">
-                        <div>
-                            <p class="text-lg font-black text-gray-800">현재 위치 저장</p>
-                            <p class="text-[10px] text-gray-400 mt-0.5 font-medium">📍 ${city}</p>
-                        </div>
-                        <button onclick="document.getElementById('gpsCatModal').remove()" class="p-2 text-gray-300">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                    <div class="p-5 space-y-4">
-                        <div>
-                            <p class="text-[10px] font-bold text-pink-500 mb-2 uppercase">'${city}' 의 어떤 분류에 넣으시겠습니까?</p>
-                            <div class="flex flex-wrap gap-2">${btnHtml}</div>
-                            <input type="text" id="gpsCatNewInput" placeholder="새 분류 이름 입력..." class="hidden mt-2 w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-pink-200 outline-none">
-                        </div>
-                        <div id="gpsCatSelected" class="hidden bg-pink-50 rounded-2xl px-4 py-2 text-[11px] text-pink-500 font-bold"></div>
-                        <div>
-                            <p class="text-[10px] font-bold text-pink-500 mb-1.5 uppercase">장소 이름</p>
-                            <input type="text" id="gpsNameInput" placeholder="예: 내가 있는 곳" value="현재 위치" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-pink-200 outline-none">
-                        </div>
-                        <input type="hidden" id="gpsAddrHidden" value="${addr}">
-                        <input type="hidden" id="gpsCityHidden" value="${city}">
-                        <input type="hidden" id="gpsSelectedCatHidden" value="">
-                        <button onclick="confirmGpsSave()" class="w-full py-3.5 bg-pink-500 text-white rounded-2xl text-[13px] font-black shadow-lg active-scale hover:bg-pink-600 transition-colors">저장하기</button>
-                    </div>
-                </div>`;
-            document.body.appendChild(div);
-        }
-
-        window.selectGpsCat = (cat) => {
-            document.getElementById('gpsSelectedCatHidden').value = cat;
-            const info = document.getElementById('gpsCatSelected');
-            info.textContent = `선택된 분류: ${cat}`;
-            info.classList.remove('hidden');
-            // 인라인 스타일로 확실하게 선택/비선택 처리
-            document.querySelectorAll('#gpsCatModal [data-cat]').forEach(b => {
-                if (b.dataset.cat === cat) {
-                    b.style.background = '#ec4899';
-                    b.style.color = '#ffffff';
-                    b.style.borderColor = '#ec4899';
-                } else {
-                    b.style.background = '#ffffff';
-                    b.style.color = '#ec4899';
-                    b.style.borderColor = '#fce7f3';
-                }
-            });
-        };
-
-        function openGpsNameModal(addr, city, cat) {
-            const existing = document.getElementById('gpsCatModal');
-            if (existing) existing.remove();
-
-            const div = document.createElement('div');
-            div.id = 'gpsCatModal';
-            div.className = 'fixed inset-0 z-[150] modal-overlay flex items-center justify-center p-4';
-            div.innerHTML = `
-                <div class="bg-white w-full max-w-sm rounded-[28px] shadow-2xl overflow-hidden">
-                    <div class="p-5 border-b border-gray-100 flex justify-between items-center">
-                        <div>
-                            <p class="text-lg font-black text-gray-800">현재 위치 저장</p>
-                            <p class="text-[10px] text-gray-400 mt-0.5">📍 ${city} › ${cat}</p>
-                        </div>
-                        <button onclick="document.getElementById('gpsCatModal').remove()" class="p-2 text-gray-300">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                    <div class="p-5 space-y-4">
-                        <div>
-                            <p class="text-[10px] font-bold text-pink-500 mb-1.5 uppercase">장소 이름</p>
-                            <input type="text" id="gpsNameInput" placeholder="예: 내가 있는 곳" value="현재 위치" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-pink-200 outline-none">
-                        </div>
-                        <input type="hidden" id="gpsAddrHidden" value="${addr}">
-                        <input type="hidden" id="gpsCityHidden" value="${city}">
-                        <input type="hidden" id="gpsSelectedCatHidden" value="${cat}">
-                        <button onclick="confirmGpsSave()" class="w-full py-3.5 bg-pink-500 text-white rounded-2xl text-[13px] font-black shadow-lg active-scale hover:bg-pink-600 transition-colors">저장하기</button>
-                    </div>
-                </div>`;
-            document.body.appendChild(div);
-        }
-
-        window.confirmGpsSave = () => {
-            const name = document.getElementById('gpsNameInput').value.trim();
-            const addr = document.getElementById('gpsAddrHidden').value;
-            const city = document.getElementById('gpsCityHidden').value;
-            let cat = document.getElementById('gpsSelectedCatHidden').value;
-
-            // 직접 입력창이 열려 있으면 그 값 사용
-            const newInput = document.getElementById('gpsCatNewInput');
-            if (newInput && !newInput.classList.contains('hidden') && newInput.value.trim()) {
-                cat = newInput.value.trim();
-            }
-
-            if (!name) return toast('장소 이름을 입력해주세요.');
-            if (!cat) return toast('분류를 선택해주세요.');
-
-            if (!state.cities.includes(city)) {
-                state.cities.push(city);
-                state.categories[city] = [];
-                renderDropdown('city');
-            }
-            if (!state.categories[city]) state.categories[city] = [];
-            if (!state.categories[city].includes(cat)) {
-                state.categories[city].push(cat);
-            }
-
-            const newPlace = {
-                id: Date.now(), name, address: addr,
-                city, cat, memo: 'GPS로 저장된 위치', photo: null
-            };
-            state.places.unshift(newPlace);
-            state.selectedCity = city;
-            state.selectedCat = cat;
-            dom.cityText.innerText = city;
-            dom.catText.innerText = cat;
-
-            syncStorage();
-            renderDropdown('city');
-            renderDropdown('category');
-            renderPlaces();
-            document.getElementById('gpsCatModal').remove();
-            toast(`'${city}' › '${cat}' 에 저장되었습니다.`);
-        };
-
-        
-        window.openDetail = (id) => {
-            const p = state.places.find(item => item.id === id);
-            state.currentDetailId = id;
-            document.getElementById('modalNameInput').value = p.name;
-            document.getElementById('modalAddressInput').value = p.address;
-            dom.modalMemo.value = p.memo || '';
-            document.getElementById('modalCityBadge').textContent = p.city || '';
-            document.getElementById('modalCatBadge').textContent = p.cat || '';
-            if (p.photo) {
-                dom.modalPhoto.style.backgroundImage = `url('${p.photo}')`;
-                dom.modalPhotoText.classList.add('hidden');
-            } else {
-                dom.modalPhoto.style.backgroundImage = '';
-                dom.modalPhotoText.classList.remove('hidden');
-            }
-            dom.detailModal.classList.replace('opacity-0', 'opacity-100');
-            dom.detailModal.classList.remove('pointer-events-none');
-            dom.detailModal.firstElementChild.classList.replace('translate-y-full', 'translate-y-0');
-        };
-
-        window.closeModal = () => {
-            dom.detailModal.classList.replace('opacity-100', 'opacity-0');
-            dom.detailModal.classList.add('pointer-events-none');
-            dom.detailModal.firstElementChild.classList.replace('translate-y-0', 'translate-y-full');
-        };
-
-        window.triggerModalPhotoUpload = () => dom.modalPhotoInput.click();
-        window.handleModalPhotoSelect = (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const imgUrl = e.target.result;
-                    dom.modalPhoto.style.backgroundImage = `url('${imgUrl}')`;
-                    dom.modalPhotoText.classList.add('hidden');
-                    const idx = state.places.findIndex(p => p.id === state.currentDetailId);
-                    state.places[idx].photo = imgUrl;
-                    syncStorage();
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-
-        window.saveDetail = () => {
-            const idx = state.places.findIndex(p => p.id === state.currentDetailId);
-            if (idx !== -1) {
-                const newName = document.getElementById('modalNameInput').value.trim();
-                const newAddress = document.getElementById('modalAddressInput').value.trim();
-                if (!newName) return toast('이름을 입력해주세요.');
-                state.places[idx].name = newName;
-                state.places[idx].address = newAddress;
-                state.places[idx].memo = dom.modalMemo.value;
-                syncStorage();
-                renderPlaces();
-                // 전체목록이 열려있으면 갱신
-                const listModal = document.getElementById('listModal');
-                if (!listModal.classList.contains('pointer-events-none')) {
-                    const q = document.getElementById('modalSearchInput').value.trim();
-                    if (q) renderFullList(q); else renderListCityTabs();
-                }
-                toast('저장 완료');
-                closeModal();
-            }
-        };
-
-        window.deletePlace = (id) => {
-                if (confirm('삭제하시겠습니까?')) {
-                    state.places = state.places.filter(p => p.id !== id);
-                    renderPlaces();
-                    syncStorage();
-                    toast('삭제 완료');
-                }
-            };
-
-
-        window.deleteItem = (event, type, name) => {
-        // 부모 요소인 드롭다운 클릭 이벤트가 발생하지 않도록 방지
-        event.stopPropagation();
-
-        let confirmMessage = '';
-        
-        // 삭제하려는 타입에 따라 경고 문구 분기
-        if (type === 'city') {
-            confirmMessage = '해당 도시를 삭제하면 저장된 카테고리 목록 및 장소들도 사라집니다. 삭제하시겠습니까?';
-        } else {
-            confirmMessage = `'${name}' 분류를 삭제하시겠습니까?`;
-        }
-
-        // 사용자가 '취소'를 누르면 여기서 중단
-        if (!confirm(confirmMessage)) return;
-
-        if (type === 'city') {
-            // 1. 도시 목록에서 제거
-            state.cities = state.cities.filter(c => c !== name);
-            
-            // 2. 해당 도시에 저장된 모든 장소 데이터 일괄 삭제
-            state.places = state.places.filter(p => p.city !== name);
-            delete state.categories[name];
-
-            // 3. 현재 선택된 도시가 삭제된 도시라면 선택 해제
-            if (state.selectedCity === name) {
-                state.selectedCity = null;
-                state.selectedCat = null;
-                dom.cityText.textContent = '도시 선택';
-                dom.catText.textContent = '분류 선택';
-            }
-        } else {
-            const city = state.selectedCity;
-            state.categories[city] = state.categories[city].filter(c => c !== name);
-            state.places = state.places.filter(p => !(p.cat === name && p.city === city));
-
-            if (state.selectedCat === name) {
-                state.selectedCat = null;
-                dom.catText.textContent = '분류 선택';
-            }
-        }
-
-        // 변화된 데이터 저장 및 UI 갱신
-        syncStorage();
-        renderDropdown(type);
-        renderPlaces();
-        toast('삭제되었습니다.');
-    };
-
-        function toast(msg) {
-            dom.toast.textContent = msg;
-            dom.toast.classList.replace('opacity-0', 'opacity-100');
-            dom.toast.classList.replace('translate-y-4', 'translate-y-0');
-            setTimeout(() => {
-                dom.toast.classList.replace('opacity-100', 'opacity-0');
-                dom.toast.classList.replace('translate-y-0', 'translate-y-4');
-            }, 1800);
-        }
-        // ── 전체목록 열기 ──
-        // ── 전체목록 열기 ──
-        window.openFullList = () => {
-            const modal = document.getElementById('listModal');
-            document.getElementById('totalCount').textContent = state.places.length;
-            document.getElementById('modalSearchInput').value = '';
-            document.getElementById('listTwoCol').classList.remove('hidden');
-            document.getElementById('listSearchResult').classList.add('hidden');
-            _listSelectedCity = null;
-            renderListSidebar();
-            modal.classList.replace('opacity-0','opacity-100');
-            modal.classList.remove('pointer-events-none');
-            modal.firstElementChild.classList.replace('scale-95','scale-100');
-        };
-
-        window.closeListModal = () => {
-            const modal = document.getElementById('listModal');
-            modal.classList.replace('opacity-100','opacity-0');
-            modal.classList.add('pointer-events-none');
-            modal.firstElementChild.classList.replace('scale-100','scale-95');
-        };
-
-        let _listSelectedCity = null;
-        const _listOpenCats = {};
-
-        function renderListSidebar() {
-            const inner = document.getElementById('listCitySidebarInner');
-            inner.innerHTML = '';
-            const allCities = [...new Set(state.places.map(p => p.city || '도시 미지정'))];
-            if (allCities.length === 0) {
-                document.getElementById('fullListContainer').innerHTML =
-                    '<p class="text-center py-10 text-gray-400 text-xs px-4">저장된 장소가 없습니다.</p>';
-                return;
-            }
-            if (!_listSelectedCity || !allCities.includes(_listSelectedCity)) {
-                _listSelectedCity = allCities[0];
-            }
-            allCities.forEach(city => {
-                const count = state.places.filter(p => (p.city||'도시 미지정') === city).length;
-                const isActive = city === _listSelectedCity;
-                const btn = document.createElement('button');
-                btn.className = 'w-full text-left px-3 py-3 transition-all relative ' +
-                    (isActive ? 'bg-white' : 'bg-transparent hover:bg-white/60');
-                btn.innerHTML =
-                    (isActive ? '<div class="absolute left-0 top-2 bottom-2 w-[3px] bg-pink-500 rounded-r-full"></div>' : '') +
-                    '<div class="font-bold text-[11px] leading-tight truncate ' + (isActive ? 'text-pink-500' : 'text-gray-500') + '">' + city + '</div>' +
-                    '<div class="text-[10px] font-bold mt-0.5 ' + (isActive ? 'text-pink-300' : 'text-gray-300') + '">' + count + '개</div>';
-                btn.onclick = () => { _listSelectedCity = city; renderListSidebar(); };
-                inner.appendChild(btn);
-                const sep = document.createElement('div');
-                sep.className = 'border-b border-gray-100 mx-2';
-                inner.appendChild(sep);
-            });
-            renderListByCityAndCat(_listSelectedCity);
-        }
-
-        function renderListByCityAndCat(city) {
-            const container = document.getElementById('fullListContainer');
-            container.innerHTML = '';
-            const places = state.places.filter(p => (p.city||'도시 미지정') === city);
-            if (places.length === 0) {
-                container.innerHTML = '<p class="text-center py-10 text-gray-400 text-xs px-4">저장된 장소가 없습니다.</p>';
-                return;
-            }
-            const catMap = {};
-            places.forEach(p => {
-                const cat = p.cat || '분류 미지정';
-                if (!catMap[cat]) catMap[cat] = [];
-                catMap[cat].push(p);
-            });
-            const key = cat => city + '::' + cat;
-            Object.entries(catMap).forEach(([cat, items]) => {
-                if (_listOpenCats[key(cat)] === undefined) _listOpenCats[key(cat)] = true;
-                const isOpen = _listOpenCats[key(cat)];
-                const hdr = document.createElement('button');
-                hdr.className = 'w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-100 sticky top-0 z-10';
-                hdr.innerHTML = '<div class="flex items-center gap-2"><span class="text-[11px] font-black text-pink-500">' + cat + '</span>' +
-                    '<span class="text-[9px] font-bold text-pink-300 bg-pink-50 px-1.5 py-0.5 rounded-full">' + items.length + '</span></div>' +
-                    '<svg class="w-3.5 h-3.5 text-pink-300 ' + (isOpen?'rotate-180':'') + '" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>';
-                hdr.onclick = () => { _listOpenCats[key(cat)] = !_listOpenCats[key(cat)]; renderListByCityAndCat(city); };
-                container.appendChild(hdr);
-                if (isOpen) {
-                    items.forEach(p => {
-                        const sc = (p.city||'').replace(/'/g,"\\'");
-                        const sk = (p.cat||'').replace(/'/g,"\\'");
-                        const el = document.createElement('div');
-                        el.className = 'px-4 py-3 border-b border-gray-50 flex justify-between items-center active:bg-gray-50';
-                        el.innerHTML =
-                            '<div class="flex-1 min-w-0 cursor-pointer pr-2" onclick="jumpToPlace(\'' + sc + '\',\'' + sk + '\',' + p.id + ')">' +
-                            '<div class="font-bold text-gray-800 text-[12px] truncate">' + p.name + '</div>' +
-                            '<div class="text-[10px] text-gray-400 truncate mt-0.5">' + p.address + '</div></div>' +
-                            '<div class="flex gap-1 shrink-0">' +
-                            '<button onclick="event.stopPropagation();openDetail(' + p.id + ')" class="text-[10px] font-bold text-blue-400 px-2 py-1 rounded-lg hover:bg-blue-50">편집</button>' +
-                            '<button onclick="event.stopPropagation();deletePlaceInList(' + p.id + ')" class="text-[10px] font-bold text-red-300 px-2 py-1 rounded-lg hover:bg-red-50">삭제</button></div>';
-                        container.appendChild(el);
-                    });
-                }
-            });
-        }
-
-        function filterModalList() {
-            const query = document.getElementById('modalSearchInput').value.trim();
-            const twoCol = document.getElementById('listTwoCol');
-            const srEl = document.getElementById('listSearchResult');
-            if (query) {
-                twoCol.classList.add('hidden');
-                srEl.classList.remove('hidden');
-                renderSearchInList(query, srEl);
-            } else {
-                twoCol.classList.remove('hidden');
-                srEl.classList.add('hidden');
-                renderListSidebar();
-            }
-        }
-
-        function renderSearchInList(query, containerEl) {
-            containerEl.innerHTML = '';
-            const q = query.toLowerCase();
-            const found = state.places.filter(p =>
-                p.name.toLowerCase().includes(q) || p.address.toLowerCase().includes(q)
-            );
-            if (found.length === 0) {
-                containerEl.innerHTML = '<p class="text-center py-10 text-gray-400 text-xs">결과가 없습니다.</p>';
-                return;
-            }
-            found.forEach(p => {
-                const city = p.city || '도시 미지정';
-                const cat = p.cat || '분류 미지정';
-                const el = document.createElement('div');
-                el.className = 'bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center mb-2';
-                const sc = city.replace(/'/g,"\\'");
-                const sk = cat.replace(/'/g,"\\'");
-                el.innerHTML =
-                    '<div class="flex-1 cursor-pointer pr-4 min-w-0" onclick="jumpToPlace(\'' + sc + '\',\'' + sk + '\',' + p.id + ')">' +
-                    '<div class="flex items-center gap-1.5 mb-1">' +
-                    '<span class="text-[9px] font-bold text-pink-400 bg-pink-50 px-1.5 py-0.5 rounded">' + city + '</span>' +
-                    '<span class="text-[9px] text-pink-300">·</span>' +
-                    '<span class="text-[9px] font-bold text-pink-300 bg-pink-50 px-1.5 py-0.5 rounded">' + cat + '</span></div>' +
-                    '<div class="font-bold text-gray-800 text-[13px] truncate">' + p.name + '</div>' +
-                    '<div class="text-[10px] text-gray-400 truncate mt-0.5">' + p.address + '</div></div>' +
-                    '<div class="flex gap-1.5 shrink-0">' +
-                    '<button onclick="event.stopPropagation();openDetail(' + p.id + ')" class="text-[10px] font-bold text-blue-400 px-2 py-1.5 rounded-lg hover:bg-blue-50">편집</button>' +
-                    '<button onclick="event.stopPropagation();deletePlaceInList(' + p.id + ')" class="text-[10px] font-bold text-red-300 px-2 py-1.5 rounded-lg hover:bg-red-50">삭제</button></div>';
-                containerEl.appendChild(el);
-            });
-        }
-
-        window.deletePlaceInList = (id) => {
-            if (confirm('정말 삭제하시겠습니까?')) {
-                state.places = state.places.filter(p => p.id !== id);
-                syncStorage();
-                document.getElementById('totalCount').textContent = state.places.length;
-                const q = document.getElementById('modalSearchInput').value.trim();
-                if (q) renderSearchInList(q, document.getElementById('listSearchResult'));
-                else renderListSidebar();
-                renderPlaces();
-                toast('삭제되었습니다.');
-            }
-        };
-
-        // 전역 변수로 현재 추가하려는 타입을 저장
-        let currentAddType = '';
-
-        // 모달 열기
-        window.addNewItem = (type) => {
-            currentAddType = type;
-            const modal = document.getElementById('addItemModal');
-            const title = document.getElementById('addItemTitle');
-            const label = document.getElementById('addItemLabel');
-            const input = document.getElementById('addItemInput');
-            
-            // 타입에 따라 텍스트 변경
-            title.innerText = type === 'city' ? '새 도시 추가' : '새 분류 추가';
-            label.innerText = type === 'city' ? '도시 이름' : '분류 이름';
-            input.placeholder = type === 'city' ? '예: 서울, 부산' : '예: 카페, 맛집';
-            input.value = ''; // 초기화
-
-            // 모달 표시
-            modal.classList.remove('pointer-events-none');
-            modal.classList.add('opacity-100');
-            modal.querySelector('div').classList.remove('scale-95', 'translate-y-full');
-            input.focus();
-        };
-
-        // 모달 닫기
-        window.closeAddItemModal = () => {
-            const modal = document.getElementById('addItemModal');
-            modal.classList.add('pointer-events-none');
-            modal.classList.remove('opacity-100');
-            modal.querySelector('div').classList.add('scale-95');
-        };
-
-        // 실제 추가 로직 (확인 버튼 클릭 시)
-        document.getElementById('addItemConfirmBtn').onclick = () => {
-            const val = document.getElementById('addItemInput').value.trim();
-            
-            
-            if (!val) return toast('이름을 입력해주세요');
-
-            if (currentAddType === 'city') {
-                if (!state.cities.includes(val)) {
-                    state.cities.push(val);
-                    state.categories[val] = [];
-                    toast(`'${val}' 도시가 추가되었습니다`);
-                }
-            } else {
-                const city = state.selectedCity;
-                if (!state.categories[city]) state.categories[city] = [];
-                if (!state.categories[city].includes(val)) {
-                    state.categories[city].push(val);
-                    toast(`'${val}' 분류가 추가되었습니다`);
-                }
-                
-            }
-
-            syncStorage();
-            closeAddItemModal();
-            renderDropdown(currentAddType); // 드롭다운 리스트 즉시 갱신
-        };
-
-
-        // 리스트에서 항목 클릭 시 해당 위치(도시/분류)로 이동
-        window.jumpToPlace = (city, cat, id) => {
-            state.selectedCity = city;
-            state.selectedCat = cat;
-            dom.cityText.textContent = city;
-            dom.catText.textContent = cat;
-            
-            renderPlaces(); // 메인 목록 갱신
-            closeListModal(); // 모달 닫기
-            
-            // 약간의 지연 후 해당 아이템으로 스크롤 (선택 사항)
-            setTimeout(() => {
-                toast(`${city} | ${cat} 목록으로 이동했습니다.`);
-            }, 300);
-        };
-
-        window.deletePlaceInList = (id) => {
-            if (confirm('정말 삭제하시겠습니까?')) {
-                state.places = state.places.filter(p => p.id !== id);
-                syncStorage();
-                document.getElementById('totalCount').textContent = state.places.length;
-                renderListCityTabs();
-                renderPlaces();
-                toast('삭제되었습니다.');
-            }
-        };
-        
-        // 검색창 입력 시 호출되는 함수
-        function filterModalList() {
-            const query = document.getElementById('modalSearchInput').value.trim().toLowerCase();
-            renderFullList(query);
-        }
-
-
-        function renderFullList(filterQuery = '') {
-            const container = document.getElementById('fullListContainer');
-            container.innerHTML = '';
-            const query = (filterQuery || '').toLowerCase();
-
-            const targetPlaces = state.places.filter(p => 
-                p.name.toLowerCase().includes(query) || p.address.toLowerCase().includes(query)
-            );
-
-            if (targetPlaces.length === 0) {
-                container.innerHTML = '<p class="text-center py-10 text-gray-400 text-xs">결과가 없습니다.</p>';
-                return;
-            }
-
-            targetPlaces.forEach(p => {
-                const city = p.city || '도시 미지정';
-                const cat = p.cat || '분류 미지정';
-                const item = document.createElement('div');
-                item.className = 'bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center active:bg-gray-50 mb-2';
-                item.innerHTML = `
-                    <div class="flex-1 cursor-pointer pr-4 min-w-0" onclick="jumpToPlace('${city}', '${cat}', ${p.id})">
-                        <div class="flex items-center gap-1.5 mb-1 flex-wrap">
-                            <span class="text-[9px] font-bold text-pink-400 bg-pink-50 px-1.5 py-0.5 rounded">${city}</span>
-                            <span class="text-[9px] text-pink-300 font-bold">·</span>
-                            <span class="text-[9px] font-bold text-pink-300 bg-pink-50 px-1.5 py-0.5 rounded">${cat}</span>
-                        </div>
-                        <h4 class="font-bold text-gray-800 text-[13px] truncate">${p.name}</h4>
-                        <p class="text-[10px] text-gray-400 truncate mt-0.5">${p.address}</p>
-                    </div>
-                    <div class="flex gap-2 shrink-0">
-                        <button onclick="event.stopPropagation(); openDetail(${p.id})" class="text-[10px] font-bold text-blue-400 px-2 py-1.5 rounded-lg hover:bg-blue-50">편집</button>
-                        <button onclick="event.stopPropagation(); deletePlaceInList(${p.id})" class="text-[10px] font-bold text-red-300 px-2 py-1.5 rounded-lg hover:bg-red-50">삭제</button>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        // ── 날짜 문자열 헬퍼 ──
-        function _getDateStr() {
-            const now = new Date();
-            const pad = n => String(n).padStart(2,'0');
-            return `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-        }
-
-        // ── JSON 내보내기 ──
-        window.exportJSON = () => {
-            const filename = `PlaceKeeper_${_getDateStr()}.json`;
-            const exportObj = {
-                version: '1.0.0',
-                exportedAt: new Date().toISOString(),
-                cities: state.cities,
-                categories: state.categories,
-                places: state.places.map(p => ({
-                    id: p.id, name: p.name, address: p.address,
-                    city: p.city || '', cat: p.cat || '', memo: p.memo || ''
-                }))
-            };
-            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = filename; a.click();
-            URL.revokeObjectURL(url);
-            toast(`📦 ${filename} 저장됨`);
-        };
-
-        // ── 엑셀 내보내기 ──
-        window.exportExcel = () => {
-            if (typeof XLSX === 'undefined') {
-                return toast('❌ 엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.');
-            }
-            const filename = `PlaceKeeper_${_getDateStr()}.xlsx`;
-
-            // 장소 시트 데이터
-            const placeRows = [['도시','분류','장소 이름','주소','메모']];
-            state.places.forEach(p => {
-                placeRows.push([p.city||'', p.cat||'', p.name||'', p.address||'', p.memo||'']);
-            });
-
-            const wb = XLSX.utils.book_new();
-
-            // 시트1: 장소 목록
-            const ws1 = XLSX.utils.aoa_to_sheet(placeRows);
-            // 컬럼 너비 설정
-            ws1['!cols'] = [
-                {wch:10},{wch:10},{wch:20},{wch:40},{wch:30}
-            ];
-            // 헤더 행 스타일 (배경 핑크)
-            const headerRange = XLSX.utils.decode_range(ws1['!ref']);
-            for (let c = headerRange.s.c; c <= headerRange.e.c; c++) {
-                const cellAddr = XLSX.utils.encode_cell({r:0, c});
-                if (!ws1[cellAddr]) continue;
-                ws1[cellAddr].s = {
-                    font: { bold: true, color: { rgb: 'FFFFFF' } },
-                    fill: { fgColor: { rgb: 'EC4899' } },
-                    alignment: { horizontal: 'center' }
-                };
-            }
-            XLSX.utils.book_append_sheet(wb, ws1, '장소 목록');
-
-            // 시트2: 도시·분류 구조
-            const cityRows = [['도시','분류']];
-            state.cities.forEach(city => {
-                const cats = state.categories[city] || [];
-                if (cats.length === 0) {
-                    cityRows.push([city, '']);
-                } else {
-                    cats.forEach(cat => cityRows.push([city, cat]));
-                }
-            });
-            const ws2 = XLSX.utils.aoa_to_sheet(cityRows);
-            ws2['!cols'] = [{wch:15},{wch:15}];
-            XLSX.utils.book_append_sheet(wb, ws2, '도시·분류');
-
-            XLSX.writeFile(wb, filename);
-            toast(`📊 ${filename} 저장됨`);
-        };
-
-        // ── 파일 불러오기 (JSON / Excel 통합) ──
-        window.importFile = (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-            event.target.value = '';
-
-            const ext = file.name.split('.').pop().toLowerCase();
-            const reader = new FileReader();
-
-            if (ext === 'json') {
-                reader.onload = e => {
-                    try {
-                        const data = JSON.parse(e.target.result);
-                        if (!data.places || !Array.isArray(data.places))
-                            return toast('❌ 올바른 PlaceKeeper JSON 파일이 아닙니다');
-                        const fileDate = data.exportedAt
-                            ? new Date(data.exportedAt).toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
-                            : '날짜 불명';
-                        _showImportConfirm(data, data.places.length, fileDate, 'json');
-                    } catch { toast('❌ 파일을 읽을 수 없습니다'); }
-                };
-                reader.readAsText(file);
-            } else if (ext === 'xlsx' || ext === 'xls') {
-                if (typeof XLSX === 'undefined')
-                    return toast('❌ 엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.');
-                reader.onload = e => {
-                    try {
-                        const wb = XLSX.read(e.target.result, { type: 'array' });
-
-                        // 장소 목록 시트 파싱
-                        const ws = wb.Sheets[wb.SheetNames[0]];
-                        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-                        if (rows.length < 2) return toast('❌ 장소 데이터가 없습니다');
-
-                        // 헤더 행으로 컬럼 인덱스 찾기
-                        const header = rows[0].map(h => String(h).trim());
-                        const ci = { city: header.indexOf('도시'), cat: header.indexOf('분류'), name: header.indexOf('장소 이름'), addr: header.indexOf('주소'), memo: header.indexOf('메모') };
-                        if (ci.name < 0) return toast('❌ "장소 이름" 컬럼을 찾을 수 없습니다');
-
-                        const places = [];
-                        const citiesSet = new Set();
-                        const catsMap = {};
-
-                        rows.slice(1).forEach((row, i) => {
-                            const name = String(row[ci.name] || '').trim();
-                            if (!name) return;
-                            const city = String(ci.city >= 0 ? row[ci.city] : '').trim();
-                            const cat  = String(ci.cat  >= 0 ? row[ci.cat]  : '').trim();
-                            const addr = String(ci.addr >= 0 ? row[ci.addr] : '').trim();
-                            const memo = String(ci.memo >= 0 ? row[ci.memo] : '').trim();
-                            if (city) {
-                                citiesSet.add(city);
-                                if (!catsMap[city]) catsMap[city] = new Set();
-                                if (cat) catsMap[city].add(cat);
-                            }
-                            places.push({ id: Date.now() + i, name, address: addr, city, cat, memo, photo: null });
-                        });
-
-                        // 도시·분류 시트가 있으면 추가로 파싱
-                        if (wb.SheetNames.length > 1) {
-                            const ws2 = wb.Sheets[wb.SheetNames[1]];
-                            const rows2 = XLSX.utils.sheet_to_json(ws2, { header: 1, defval: '' });
-                            rows2.slice(1).forEach(row => {
-                                const city = String(row[0]||'').trim();
-                                const cat  = String(row[1]||'').trim();
-                                if (city) {
-                                    citiesSet.add(city);
-                                    if (!catsMap[city]) catsMap[city] = new Set();
-                                    if (cat) catsMap[city].add(cat);
-                                }
-                            });
-                        }
-
-                        const cities = [...citiesSet];
-                        const categories = {};
-                        cities.forEach(city => { categories[city] = [...(catsMap[city] || [])]; });
-
-                        const importData = { cities, categories, places, exportedAt: null };
-                        _showImportConfirm(importData, places.length, `엑셀 (${file.name})`, 'excel');
-                    } catch(err) { console.error(err); toast('❌ 엑셀 파일을 읽을 수 없습니다'); }
-                };
-                reader.readAsArrayBuffer(file);
-            } else {
-                toast('❌ JSON 또는 Excel(.xlsx) 파일만 지원합니다');
-            }
-        };
-
-        // ── 불러오기 확인 모달 ──
-        function _showImportConfirm(data, placeCount, fileDesc, type) {
-            const existing = document.getElementById('importConfirmModal');
-            if (existing) existing.remove();
-
-            const typeLabel = type === 'excel' ? '📊 Excel' : '📦 JSON';
-            const div = document.createElement('div');
-            div.id = 'importConfirmModal';
-            div.className = 'fixed inset-0 z-[300] modal-overlay flex items-center justify-center p-4';
-            div.innerHTML = `
-                <div class="bg-white w-full max-w-sm rounded-[28px] shadow-2xl overflow-hidden">
-                    <div class="p-5 border-b border-gray-100 flex items-center gap-2">
-                        <span class="text-base">${typeLabel}</span>
-                        <div>
-                            <p class="text-base font-black text-gray-800">데이터 불러오기</p>
-                            <p class="text-[10px] text-gray-400 mt-0.5">${fileDesc}</p>
-                        </div>
-                    </div>
-                    <div class="p-5 space-y-4">
-                        <div class="bg-pink-50 rounded-2xl px-4 py-3 space-y-2">
-                            <div class="flex justify-between items-center">
-                                <span class="text-[11px] text-gray-500 font-medium">파일 장소 수</span>
-                                <span class="text-[12px] font-black text-pink-500">${placeCount}개</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-[11px] text-gray-500 font-medium">현재 저장 장소</span>
-                                <span class="text-[12px] font-black text-gray-500">${state.places.length}개</span>
-                            </div>
-                        </div>
-                        <div class="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-2">
-                            <span class="text-base shrink-0">⚠️</span>
-                            <p class="text-[11px] text-amber-700 font-bold leading-relaxed">
-                                불러오기하면 현재 데이터가<br>
-                                <span class="text-red-500">파일 데이터로 교체</span>됩니다.<br>
-                                현재 데이터를 먼저 내보내기 해두세요.
-                            </p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="document.getElementById('importConfirmModal').remove()"
-                                class="flex-1 py-3 bg-gray-100 text-gray-600 rounded-2xl text-[13px] font-black active-scale">취소</button>
-                            <button onclick="_confirmImport()"
-                                class="flex-1 py-3 bg-gray-800 text-white rounded-2xl text-[13px] font-black shadow-lg active-scale">덮어쓰기</button>
-                        </div>
-                    </div>
-                </div>`;
-            document.body.appendChild(div);
-            window._pendingImportData = data;
-        }
-
-        window._confirmImport = () => {
-            const data = window._pendingImportData;
-            if (!data) return;
-            window._pendingImportData = null;
-
-            if (data.cities) state.cities = data.cities;
-            if (data.categories) state.categories = data.categories;
-            if (data.places) state.places = data.places;
-            state.selectedCity = null;
-            state.selectedCat = null;
-            dom.cityText.textContent = '도시 선택';
-            dom.catText.textContent = '분류 선택';
-
-            syncStorage();
-            renderDropdown('city');
-            renderDropdown('category');
-            renderPlaces();
-
-            document.getElementById('importConfirmModal').remove();
-            closeSettings();
-            toast(`✅ ${data.places.length}개 장소를 불러왔습니다`);
-        };
-
-                // ── 설정 패널 ──
-        window.openSettings = () => {
-            document.getElementById('settingsPanel').classList.add('open');
-        };
-        window.closeSettings = () => {
-            document.getElementById('settingsPanel').classList.remove('open');
-        };
-
-        window.toggleDarkMode = (checkbox) => {
-            const isDark = checkbox.checked;
-            const bg = document.getElementById('darkModeBg');
-            const dot = document.getElementById('darkModeDot');
-            const label = document.getElementById('darkModeLabel');
-            if (isDark) {
-                document.body.classList.add('dark-mode');
-                bg.classList.replace('bg-gray-200', 'bg-pink-500');
-                dot.style.transform = 'translateX(24px)';
-                label.textContent = '현재: 다크 모드';
-            } else {
-                document.body.classList.remove('dark-mode');
-                bg.classList.replace('bg-pink-500', 'bg-gray-200');
-                dot.style.transform = 'translateX(0)';
-                label.textContent = '현재: 라이트 모드';
-            }
-            localStorage.setItem('darkMode', isDark ? '1' : '0');
-        };
-
-        // 다크모드 초기화 (저장된 값 복원)
-        function initDarkMode() {
-            const saved = localStorage.getItem('darkMode');
-            if (saved === '1') {
-                const toggle = document.getElementById('darkModeToggle');
-                toggle.checked = true;
-                toggleDarkMode(toggle);
-            }
-        }
-
-        init();
-        initDarkMode();
-    </script>
 </body>
 </html>
